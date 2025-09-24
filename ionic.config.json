@@ -1,0 +1,7 @@
+{
+  "name": "taynaracasagrande-beauty",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
