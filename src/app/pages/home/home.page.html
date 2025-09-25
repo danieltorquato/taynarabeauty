@@ -1,0 +1,49 @@
+<ion-content fullscreen>
+  <!-- Banner -->
+  <div class="banner">
+    <img src="assets/img/logo.jpg" alt="Taynara Casagrande Beauty" class="logo">
+    <h1>Taynara Casagrande Beauty</h1>
+    <p>Agende seus procedimentos com facilidade e conheça nossos cursos.</p>
+  </div>
+
+  <!-- Serviços -->
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12" size-md="6">
+        <ion-card class="custom-card" routerLink="/agendamentos" [queryParams]="{ service: 'cilios' }">
+          <img src="assets/img/cilios.jpg" alt="Alongamento de Cílios" class="img-card"/>
+          <ion-card-header>
+            <ion-card-title>👁️ Alongamento de Cílios</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Realce seu olhar com técnicas modernas e personalizadas.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="custom-card" routerLink="/agendamentos" [queryParams]="{ service: 'labios' }">
+          <img src="assets/img/labios.jpg" alt="Design de Lábios" class="img-card"/>
+          <ion-card-header>
+            <ion-card-title>💄 Design de Lábios</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Procedimentos para realçar sua beleza natural com elegância.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12">
+        <ion-card class="custom-card">
+          <img src="assets/img/cursos.jpg" alt="Cursos de Estética" class="img-card"/>
+          <ion-card-header>
+            <ion-card-title>📚 Cursos Profissionalizantes</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Aprenda com especialistas e conquiste sua independência financeira.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+</ion-content>

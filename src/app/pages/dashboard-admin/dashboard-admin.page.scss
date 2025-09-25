@@ -1,0 +1,204 @@
+.admin-container {
+  padding: 16px;
+}
+
+.date-card {
+  margin-bottom: 16px;
+}
+
+.date-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pending-changes {
+  margin-top: 16px;
+  padding: 12px;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 8px;
+}
+
+.pending-changes p {
+  margin: 0 0 12px 0;
+  color: #856404;
+  font-weight: 500;
+}
+
+.save-actions {
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .save-actions {
+    flex-direction: row;
+  }
+}
+
+.schedule-card {
+  margin-bottom: 16px;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.time-slot {
+  padding: 12px 8px;
+  border-radius: 8px;
+  border: 2px solid;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.time-slot.available {
+  background: #e8f5e8;
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.time-slot.available:hover {
+  background: #c8e6c9;
+  transform: scale(1.02);
+}
+
+.time-slot.blocked {
+  background: #ffebee;
+  border-color: #f44336;
+  color: #c62828;
+}
+
+.time-slot.blocked:hover {
+  background: #ffcdd2;
+  transform: scale(1.02);
+}
+
+.time-slot.booked {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  color: #1565c0;
+  cursor: default;
+}
+
+.time-slot .time {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.time-slot .status {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.time-slot .client {
+  font-size: 0.7rem;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.time-slot.has-changes {
+  position: relative;
+  border-width: 3px;
+  border-style: dashed;
+}
+
+.time-slot.has-changes.available {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+.time-slot.has-changes.blocked {
+  border-color: #c62828;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3);
+}
+
+.change-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 0.8rem;
+}
+
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-dot.available {
+  background: #4caf50;
+}
+
+.legend-dot.blocked {
+  background: #f44336;
+}
+
+.legend-dot.booked {
+  background: #2196f3;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.status-pendente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.status-confirmado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.status-cancelado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+ion-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .time-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .legend {
+    justify-content: center;
+  }
+}

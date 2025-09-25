@@ -1,0 +1,96 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Gestão da Agenda</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="admin-container">
+
+    <!-- Seletor de Data -->
+    <ion-card class="date-card">
+      <ion-card-content>
+        <ion-item>
+          <ion-label position="stacked">Selecionar Data</ion-label>
+          <ion-input type="date" [(ngModel)]="selectedDate" (ionInput)="onDateChange()"></ion-input>
+        </ion-item>
+        <div class="date-actions">
+          <ion-button size="small" (click)="liberarTodosHorarios()">Liberar Todos</ion-button>
+          <ion-button size="small" color="danger" (click)="bloquearTodosHorarios()">Bloquear Todos</ion-button>
+        </div>
+
+        <!-- Indicador de alterações pendentes -->
+        <div *ngIf="hasUnsavedChanges" class="pending-changes">
+          <p>⚠️ {{ pendingChanges.length }} alteração(ões) pendente(s)</p>
+          <div class="save-actions">
+            <ion-button expand="block" color="success" (click)="salvarAlteracoes()">
+              💾 Salvar Alterações
+            </ion-button>
+            <ion-button expand="block" fill="outline" color="medium" (click)="descartarAlteracoes()">
+              ↩️ Descartar
+            </ion-button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Grade de Horários -->
+    <ion-card class="schedule-card">
+      <ion-card-header>
+        <ion-card-title>Horários - {{ selectedDate }}</ion-card-title>
+        <p>Clique nos horários para liberar/bloquear</p>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="time-grid">
+          <div *ngFor="let slot of timeSlots"
+               class="time-slot"
+               [class.available]="slot.status === 'livre'"
+               [class.blocked]="slot.status === 'bloqueado'"
+               [class.booked]="slot.status === 'ocupado'"
+               [class.has-changes]="slot.hasChanges"
+               (click)="toggleTimeSlot(slot)">
+            <div class="time">{{ slot.time }}</div>
+            <div class="status">{{ getStatusLabel(slot.status) }}</div>
+            <div *ngIf="slot.cliente" class="client">{{ slot.cliente }}</div>
+            <div *ngIf="slot.hasChanges" class="change-indicator">✏️</div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-dot available"></span>
+            <span>Livre</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot blocked"></span>
+            <span>Bloqueado</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot booked"></span>
+            <span>Ocupado</span>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Agendamentos do Dia -->
+    <ion-card *ngIf="agendamentosData.length > 0">
+      <ion-card-header>
+        <ion-card-title>Agendamentos de {{ selectedDate }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let ag of agendamentosData">
+            <ion-label>
+              <h3>{{ ag.hora }} - {{ ag.cliente_nome || 'Cliente' }}</h3>
+              <p>{{ ag.procedimento_nome || 'Procedimento' }}</p>
+              <p class="status-badge" [class]="'status-' + ag.status">{{ ag.status | titlecase }}</p>
+              <p *ngIf="ag.observacoes"><small>{{ ag.observacoes }}</small></p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+  </div>
+</ion-content>

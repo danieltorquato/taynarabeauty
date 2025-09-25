@@ -1,0 +1,164 @@
+ion-content {
+  --background: #fee8f5; // rosa claro
+  font-family: 'Poppins', sans-serif;
+  // --background: #f28cb4;
+}
+
+.wrapper {
+  padding: 16px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  padding-bottom: 10px;
+}
+
+ion-label {
+  font-size: 0.95rem;
+  color: #444;
+  font-weight: 500;
+}
+
+.textarea, input {
+  width: 100%;
+  border: 1px solid #f3cde0;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 1rem;
+  margin-top: 6px;
+  background: #fff;
+}
+
+.calendar-container {
+  margin: 20px 0;
+  border: 1px solid #f3cde0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.calendar {
+  --background: #fff;
+  --ion-text-color: #000;
+  --ion-color-primary: #f28cb4; /* realce padrão rosa */
+  --ion-color-primary-contrast: #ffffff; /* texto branco nos estados selecionados */
+}
+
+.time-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+ion-chip {
+  border-radius: 25px;
+  padding: 0 18px;
+  font-size: 1rem;
+  --color: #444;
+  --background: #f9e1ef;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+ion-chip.active {
+  --background: #f28cb4; // rosa forte
+  --color: #fff;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid #eee;
+  background: #fff;
+  position: sticky;
+  bottom: 0;
+}
+
+.footer .price h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111;
+}
+
+.footer .price p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+.btn-submit {
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  height: 48px;
+  margin-left: 12px;
+  --background: #f28cb4;
+}
+
+.label-inline {
+  margin: 12px 0 6px 12px;
+  display: inline-block;
+  color: #2b1130;
+}
+
+.color-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 12px 10px;
+}
+
+.color-chips ion-chip {
+  --background: #fff;
+  border: 1px solid #e6d3e0;
+}
+
+.color-chips ion-chip.active {
+  border-color: #f28cb4;
+  box-shadow: 0 0 0 2px rgba(242, 140, 180, 0.15);
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* Circundar a data de hoje e manter fonte, mesmo quando outra data estiver selecionada */
+:host ::ng-deep ion-datetime.calendar .calendar-day.calendar-day-today .calendar-day-inner,
+:host ::ng-deep .calendar .calendar-day.calendar-day-today .calendar-day-inner {
+  box-shadow: 0 0 0 2px #e06396 inset;
+  border-radius: 8px;
+}
+
+/* Ao selecionar qualquer data: via aria-selected ou classe active */
+:host ::ng-deep ion-datetime.calendar .calendar-day[aria-selected="true"] .calendar-day-inner,
+:host ::ng-deep .calendar .calendar-day[aria-selected="true"] .calendar-day-inner,
+:host ::ng-deep ion-datetime.calendar .calendar-day.calendar-day-active .calendar-day-inner,
+:host ::ng-deep .calendar .calendar-day.calendar-day-active .calendar-day-inner {
+  background: #f28cb4;
+  color: #fff;
+}
+
+/* Estilos para seções do combo */
+.combo-section {
+  margin: 16px 0;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 12px;
+  border-left: 4px solid #f28cb4;
+}
+
+.combo-section h3 {
+  margin: 0 0 8px 0;
+  color: #7a2d68;
+  font-size: 1.1rem;
+  font-weight: 600;
+}

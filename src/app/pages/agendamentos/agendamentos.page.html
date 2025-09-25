@@ -1,0 +1,125 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Fazer uma reserva</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="wrapper">
+    <ion-list lines="none" class="card">
+
+      <!-- Procedimento -->
+      <ion-item>
+        <ion-label position="stacked">Procedimento</ion-label>
+        <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="setProcedimento(selectedProcedimento)">
+          <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">{{ p.nome }} - R$ {{ (p.preco_centavos / 100).toFixed(2) }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+
+
+
+      <!-- Data -->
+      <div class="calendar-container">
+        <ion-datetime
+          presentation="date"
+          locale="pt-BR"
+          [(ngModel)]="selectedDate"
+          (ionChange)="onDateChange()"
+          class="calendar"
+          color="primary"
+        ></ion-datetime>
+      </div>
+
+      <!-- Horários -->
+      <div class="time-slots">
+        <ion-chip
+          *ngFor="let t of horariosDisponiveis"
+          (click)="selectedTime = t"
+          [class.active]="selectedTime === t">
+          {{ t }}
+        </ion-chip>
+      </div>
+
+      <!-- Opções por procedimento -->
+      <ng-container *ngIf="isCiliosSelected">
+        <!-- Tipos de cílios (se disponível) -->
+        <ion-item *ngIf="getCiliosTypeOptions().length > 0">
+          <ion-label position="stacked">Tipo de cílios</ion-label>
+          <ion-select interface="popover" [(ngModel)]="tipoCilios">
+            <ion-select-option *ngFor="let opt of getCiliosTypeOptions()" [value]="opt.value">{{ opt.label }}</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <!-- Cores de cílios (se disponível) -->
+        <ng-container *ngIf="getCiliosCorOptions().length > 0">
+          <ion-label class="label-inline">Cor dos cílios</ion-label>
+          <div class="color-chips">
+            <ion-chip *ngFor="let c of getCiliosCorOptions()" (click)="corCilios = c.value" [class.active]="corCilios === c.value">
+              <span class="dot" [style.background]="c.value === 'preto' ? '#000000' : '#8B4513'"></span>
+              {{ c.label }}
+            </ion-chip>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <ng-container *ngIf="isLabiosSelected">
+        <ion-label class="label-inline">Cor dos lábios</ion-label>
+        <div class="color-chips">
+          <ion-chip *ngFor="let c of getLabiosCorOptions()" (click)="corLabios = c.value" [class.active]="corLabios === c.value">
+            <span class="dot" [style.background]="c.value === 'natural' ? '#f4c2a1' : (c.value === 'rose' ? '#ff8fb1' : '#e8b0a0')"></span>
+            {{ c.label }}
+          </ion-chip>
+        </div>
+      </ng-container>
+
+      <!-- Combo: Cílios + Lábios -->
+      <ng-container *ngIf="isComboSelected">
+        <!-- Seção Cílios do Combo -->
+        <div class="combo-section">
+          <h3>Opções de Cílios</h3>
+          <ion-item *ngIf="getCiliosTypeOptions().length > 0">
+            <ion-label position="stacked">Tipo de cílios</ion-label>
+            <ion-select interface="popover" [(ngModel)]="tipoCilios">
+              <ion-select-option *ngFor="let opt of getCiliosTypeOptions()" [value]="opt.value">{{ opt.label }}</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ng-container *ngIf="getCiliosCorOptions().length > 0">
+            <ion-label class="label-inline">Cor dos cílios</ion-label>
+            <div class="color-chips">
+              <ion-chip *ngFor="let c of getCiliosCorOptions()" (click)="corCilios = c.value" [class.active]="corCilios === c.value">
+                <span class="dot" [style.background]="c.value === 'preto' ? '#000000' : '#8B4513'"></span>
+                {{ c.label }}
+              </ion-chip>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- Seção Lábios do Combo -->
+        <div class="combo-section">
+          <h3>Opções de Lábios</h3>
+          <ion-label class="label-inline">Cor dos lábios</ion-label>
+          <div class="color-chips">
+            <ion-chip *ngFor="let c of getLabiosCorOptions()" (click)="corLabios = c.value" [class.active]="corLabios === c.value">
+              <span class="dot" [style.background]="c.value === 'natural' ? '#f4c2a1' : (c.value === 'rose' ? '#ff8fb1' : '#e8b0a0')"></span>
+              {{ c.label }}
+            </ion-chip>
+          </div>
+        </div>
+      </ng-container>
+
+    </ion-list>
+  </div>
+
+  <!-- Rodapé -->
+  <div class="footer">
+    <div class="price">
+      <h2>R$ 120,00</h2>
+      <p>45 min</p>
+    </div>
+    <ion-button expand="block" class="btn-submit" (click)="onSubmit()">Continuar</ion-button>
+  </div>
+</ion-content>

@@ -1,0 +1,26 @@
+<ion-content>
+  <div class="wrap">
+    <div class="card">
+      <h1>Pedido recebido!</h1>
+      <p>Obrigado, {{ nome }}. Recebemos sua solicitação de agendamento.</p>
+
+      <div class="summary">
+        <div><strong>Serviço:</strong> {{ servico }}</div>
+        <div><strong>Data:</strong> {{ data }}</div>
+        <div><strong>Hora:</strong> {{ hora }}</div>
+        <div *ngIf="telefone"><strong>Telefone:</strong> {{ telefone }}</div>
+        <div *ngIf="email"><strong>E-mail:</strong> {{ email }}</div>
+        <div *ngIf="id"><strong>Código:</strong> #{{ id }}</div>
+      </div>
+
+      <div class="actions">
+        <a *ngIf="whatsapp" [href]="whatsapp" target="_blank" rel="noopener" class="btn btn--wa">Confirmar no WhatsApp</a>
+        <a routerLink="/home" class="btn">Voltar para Home</a>
+      </div>
+
+      <div class="hint" *ngIf="emailSent">Um e-mail de confirmação foi enviado.</div>
+    </div>
+  </div>
+</ion-content>
+
+

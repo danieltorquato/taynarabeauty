@@ -1,0 +1,40 @@
+<ion-content>
+  <div class="login-wrapper">
+    <div class="card">
+      <div class="brand">
+        <h1>Taynara Beauty</h1>
+        <p class="subtitle">Acesse sua conta</p>
+      </div>
+      <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <ion-input
+          label="E-mail"
+          labelPlacement="floating"
+          type="email"
+          inputmode="email"
+          required
+          [(ngModel)]="email"
+          name="email">
+        </ion-input>
+
+        <ion-input
+          label="Senha"
+          labelPlacement="floating"
+          [type]="showPassword ? 'text' : 'password'"
+          required
+          [(ngModel)]="password"
+          name="password">
+        </ion-input>
+
+        <div class="links">
+          <a href="#" (click)="$event.preventDefault()">Esqueci minha senha</a>
+          <a href="#" (click)="$event.preventDefault()">Criar conta</a>
+        </div>
+
+        <ion-button expand="block" type="submit" [disabled]="loading || !loginForm.form.valid">
+          {{ loading ? 'Entrando...' : 'Entrar' }}
+        </ion-button>
+        <div class="footer-note">Clínica de estética • Cuidar é amar-se</div>
+      </form>
+    </div>
+  </div>
+</ion-content>
