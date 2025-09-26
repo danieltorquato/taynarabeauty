@@ -97,4 +97,27 @@ export class ApiService {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http.post(url, batchData, { headers });
   }
+
+  // Gestão de Profissionais
+  getUsuarios(): Observable<any> {
+    const url = `${this.baseUrl}/usuarios`;
+    return this.http.get(url);
+  }
+
+  criarProfissional(profissional: any): Observable<any> {
+    const url = `${this.baseUrl}/profissionais`;
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post(url, profissional, { headers });
+  }
+
+  atualizarProfissional(id: number, profissional: any): Observable<any> {
+    const url = `${this.baseUrl}/profissionais/${id}`;
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.put(url, profissional, { headers });
+  }
+
+  excluirProfissional(id: number): Observable<any> {
+    const url = `${this.baseUrl}/profissionais/${id}`;
+    return this.http.delete(url);
+  }
 }

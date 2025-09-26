@@ -1,0 +1,134 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Gestão de Profissionais</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="abrirModalNovo()" class="novo-profissional-mobile">
+        <ion-icon name="person-add-outline"></ion-icon>
+        <span class="button-text">Novo Profissional</span>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="container">
+    <!-- Lista de Profissionais -->
+    <div class="profissionais-grid">
+      <ion-card *ngFor="let profissional of profissionais" class="profissional-card">
+        <ion-card-header>
+          <div class="profissional-header">
+            <img [src]="getImageUrl(profissional)" [alt]="profissional.nome" class="profissional-avatar">
+            <ion-card-title>{{ profissional.nome }}</ion-card-title>
+          </div>
+        </ion-card-header>
+
+        <ion-card-content>
+          <div class="profissional-info">
+            <p><strong>Usuário:</strong> {{ getUsuarioNome(profissional.usuario_id) }}</p>
+            <p><strong>Status:</strong>
+              <ion-chip [color]="profissional.ativo ? 'success' : 'danger'">
+                {{ profissional.ativo ? 'Ativo' : 'Inativo' }}
+              </ion-chip>
+            </p>
+            <p><strong>Competências:</strong></p>
+            <div class="competencias">
+              <ion-chip *ngFor="let comp of profissional.competencias" color="primary" class="competencia-categoria">
+                {{ getCompetenciaNome(comp) }}
+              </ion-chip>
+            </div>
+          </div>
+
+          <div class="acoes">
+            <ion-button fill="outline" (click)="abrirModalEdicao(profissional)">
+              <ion-icon name="create-outline"></ion-icon>
+              Editar
+            </ion-button>
+            <ion-button fill="outline" color="danger" (click)="excluirProfissional(profissional)">
+              <ion-icon name="trash-outline"></ion-icon>
+              Excluir
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+
+    <!-- Modal de Novo/Edição -->
+    <div class="modal-overlay" *ngIf="isModalOpen" (click)="fecharModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>{{ isEditMode ? 'Editar Profissional' : 'Novo Profissional' }}</h2>
+          <ion-button fill="clear" (click)="fecharModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Upload de Imagem -->
+          <div class="image-upload-section">
+            <div class="current-image">
+              <img [src]="novoProfissional.foto || 'https://via.placeholder.com/150x150/f28cb4/ffffff?text=+' + novoProfissional.nome.charAt(0)"
+                   [alt]="novoProfissional.nome"
+                   class="preview-image">
+            </div>
+            <input type="file"
+                   accept="image/*"
+                   (change)="onImageSelected($event)"
+                   id="imageUpload"
+                   style="display: none;">
+            <ion-button fill="outline" (click)="triggerImageUpload()">
+              <ion-icon name="camera-outline"></ion-icon>
+              {{ novoProfissional.foto ? 'Alterar Foto' : 'Adicionar Foto' }}
+            </ion-button>
+          </div>
+
+          <ion-item>
+            <ion-label position="stacked">Nome do Profissional</ion-label>
+            <ion-input [(ngModel)]="novoProfissional.nome" placeholder="Digite o nome"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Usuário</ion-label>
+            <ion-select [(ngModel)]="novoProfissional.usuario_id" placeholder="Selecione um usuário">
+              <ion-select-option *ngFor="let usuario of usuarios" [value]="usuario.id">
+                {{ usuario.nome }} ({{ usuario.email }})
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label>Ativo</ion-label>
+            <ion-checkbox [(ngModel)]="novoProfissional.ativo"></ion-checkbox>
+          </ion-item>
+
+          <div class="competencias-section">
+            <h3>Competências</h3>
+            <p>Selecione os procedimentos que este profissional pode realizar:</p>
+
+            <div class="competencias-grid">
+              <div
+                *ngFor="let procedimento of procedimentos"
+                class="competencia-item"
+                [class.selected]="temCompetencia(procedimento.id)"
+                (click)="toggleCompetencia(procedimento.id)">
+                <ion-checkbox
+                  [checked]="temCompetencia(procedimento.id)"
+                  (ionChange)="toggleCompetencia(procedimento.id)">
+                </ion-checkbox>
+                <span class="competencia-categoria">{{ procedimento.nome }}</span>
+                <ion-chip class="competencia-categoria">{{ procedimento.categoria }}</ion-chip>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <ion-button fill="outline" (click)="fecharModal()">Cancelar</ion-button>
+          <ion-button (click)="salvarProfissional()">
+            <ion-icon name="checkmark-outline"></ion-icon>
+            {{ isEditMode ? 'Atualizar' : 'Criar' }}
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,277 @@
+.container {
+  padding: 16px;
+  background: linear-gradient(135deg, #f8e8f0 0%, #f0d6e0 100%);
+  min-height: 100vh;
+}
+
+ion-header ion-toolbar {
+  --background: linear-gradient(135deg, #f8e8f0 0%, #f0d6e0 100%);
+  --color: #2b1130;
+}
+
+.profissionais-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.profissional-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: white;
+  border: 1px solid #e8c4d0;
+  transition: all 0.3s ease;
+}
+
+.profissional-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.profissional-info {
+  margin-bottom: 16px;
+}
+
+.profissional-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profissional-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f28cb4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.profissional-card ion-card-title {
+  color: #2b1130;
+  font-weight: 600;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.profissional-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #2b1130;
+  font-weight: 500;
+}
+
+.competencias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.competencias ion-chip {
+  --background: #f28cb4;
+  --color: #2b1130;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.acoes {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.acoes ion-button {
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --color: #2b1130;
+  --border-color: #2b1130;
+}
+
+.acoes ion-button:hover {
+  --background: #2b1130;
+  --color: rgb(0, 0, 0);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  border: 2px solid #f28cb4;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #2b1130;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fef7f7;
+  border-radius: 12px;
+  border: 2px dashed #f28cb4;
+}
+
+.current-image {
+  margin-bottom: 12px;
+}
+
+.preview-image {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f28cb4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.competencias-section {
+  margin-top: 20px;
+}
+
+.competencias-section h3 {
+  color: #2b1130;
+  margin-bottom: 8px;
+}
+
+.competencias-section p {
+  color: #666;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.competencias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.competencia-categoria {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+  background: #f28cb4;
+}
+.competencia-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.competencia-item:hover {
+  border-color: #2b1130;
+  background: #f0f0f0;
+}
+
+.competencia-item.selected {
+  border-color: #2b1130;
+  background: #f8e8f0;
+}
+
+.competencia-item span {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2b1130;
+}
+
+.competencia-item ion-chip {
+  --background: #f28cb4;
+  --color: #2b1130;
+  font-size: 11px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.modal-footer ion-button {
+  --color: #2b1130;
+  --border-color: #2b1130;
+}
+
+.modal-footer ion-button[fill="solid"] {
+  --background: #2b1130;
+  --color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .profissionais-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .competencias-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .acoes {
+    flex-direction: column;
+  }
+
+  /* Botão mobile - apenas ícone */
+  .novo-profissional-mobile {
+    --padding-start: 12px;
+    --padding-end: 12px;
+    --color: #2b1130;
+    --background: transparent;
+    --border-color: #2b1130;
+  }
+
+  .novo-profissional-mobile .button-text {
+    display: none;
+  }
+
+  .novo-profissional-mobile ion-icon {
+    color: #2b1130;
+  }
+}

@@ -26,10 +26,28 @@ class ProfissionaisController {
                     // Filtrar profissionais por especialização baseada no procedimento
                     $profissionais = $this->getProfissionaisPorProcedimento($conn, $procedimentoId);
                 } else {
-                    // Buscar todos os profissionais ativos
-                    $stmt = $conn->prepare('SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome FROM profissionais p LEFT JOIN usuarios u ON p.usuario_id = u.id WHERE p.ativo = 1 ORDER BY p.nome');
+                // Buscar todos os profissionais ativos com competências
+                $stmt = $conn->prepare('
+                    SELECT p.id, p.nome, p.usuario_id, p.ativo, p.foto, u.nome as usuario_nome
+                    FROM profissionais p
+                    LEFT JOIN usuarios u ON p.usuario_id = u.id
+                    ORDER BY p.nome
+                ');
+                $stmt->execute();
+                $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Buscar competências para cada profissional
+                foreach ($profissionais as &$prof) {
+                    $stmt = $conn->prepare('
+                        SELECT pe.procedimento_id
+                        FROM profissional_especializacoes pe
+                        WHERE pe.profissional_id = :profissional_id
+                    ');
+                    $stmt->bindParam(':profissional_id', $prof['id']);
                     $stmt->execute();
-                    $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $competencias = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    $prof['competencias'] = $competencias;
+                }
                 }
 
                 // Adicionar fotos de exemplo
@@ -126,6 +144,173 @@ class ProfissionaisController {
         }
 
         return $profissionais;
+    }
+
+    public function criar() {
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $nome = trim($input['nome'] ?? '');
+        $usuario_id = (int)($input['usuario_id'] ?? 0);
+        $ativo = (bool)($input['ativo'] ?? true);
+        $competencias = $input['competencias'] ?? [];
+        $foto = trim($input['foto'] ?? '');
+
+        if ($nome === '' || $usuario_id === 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Nome e usuário são obrigatórios']);
+            return;
+        }
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            $conn->beginTransaction();
+
+            // Inserir profissional
+            $stmt = $conn->prepare('INSERT INTO profissionais (nome, usuario_id, ativo, foto) VALUES (:nome, :usuario_id, :ativo, :foto)');
+            $stmt->bindParam(':nome', $nome);
+            $stmt->bindParam(':usuario_id', $usuario_id);
+            $stmt->bindParam(':ativo', $ativo, PDO::PARAM_BOOL);
+            $stmt->bindParam(':foto', $foto);
+            $stmt->execute();
+            $profissional_id = (int)$conn->lastInsertId();
+
+            // Inserir competências
+            if (!empty($competencias)) {
+                $stmt = $conn->prepare('INSERT INTO profissional_especializacoes (profissional_id, procedimento_id) VALUES (:profissional_id, :procedimento_id)');
+                foreach ($competencias as $procedimento_id) {
+                    $stmt->bindParam(':profissional_id', $profissional_id);
+                    $stmt->bindParam(':procedimento_id', $procedimento_id);
+                    $stmt->execute();
+                }
+            }
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Profissional criado com sucesso',
+                'id' => $profissional_id
+            ]);
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('Erro ProfissionaisController::criar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao criar profissional: ' . $e->getMessage()]);
+        }
+    }
+
+    public function atualizar($id) {
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $nome = trim($input['nome'] ?? '');
+        $usuario_id = (int)($input['usuario_id'] ?? 0);
+        $ativo = (bool)($input['ativo'] ?? true);
+        $competencias = $input['competencias'] ?? [];
+        $foto = trim($input['foto'] ?? '');
+
+        if ($nome === '' || $usuario_id === 0) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Nome e usuário são obrigatórios']);
+            return;
+        }
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            $conn->beginTransaction();
+
+            // Atualizar profissional
+            $stmt = $conn->prepare('UPDATE profissionais SET nome = :nome, usuario_id = :usuario_id, ativo = :ativo, foto = :foto WHERE id = :id');
+            $stmt->bindParam(':nome', $nome);
+            $stmt->bindParam(':usuario_id', $usuario_id);
+            $stmt->bindParam(':ativo', $ativo, PDO::PARAM_BOOL);
+            $stmt->bindParam(':foto', $foto);
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Remover competências antigas
+            $stmt = $conn->prepare('DELETE FROM profissional_especializacoes WHERE profissional_id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Inserir novas competências
+            if (!empty($competencias)) {
+                $stmt = $conn->prepare('INSERT INTO profissional_especializacoes (profissional_id, procedimento_id) VALUES (:profissional_id, :procedimento_id)');
+                foreach ($competencias as $procedimento_id) {
+                    $stmt->bindParam(':profissional_id', $id);
+                    $stmt->bindParam(':procedimento_id', $procedimento_id);
+                    $stmt->execute();
+                }
+            }
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Profissional atualizado com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('Erro ProfissionaisController::atualizar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao atualizar profissional: ' . $e->getMessage()]);
+        }
+    }
+
+    public function excluir($id) {
+        header('Content-Type: application/json');
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            $conn->beginTransaction();
+
+            // Remover especializações
+            $stmt = $conn->prepare('DELETE FROM profissional_especializacoes WHERE profissional_id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Remover profissional
+            $stmt = $conn->prepare('DELETE FROM profissionais WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Profissional excluído com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            $conn->rollback();
+            error_log('Erro ProfissionaisController::excluir: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao excluir profissional: ' . $e->getMessage()]);
+        }
     }
 }
 ?>

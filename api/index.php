@@ -112,6 +112,32 @@ if ($route === '/admin/horarios/salvar-batch' && $_SERVER['REQUEST_METHOD'] === 
     exit;
 }
 
+// Gestão de Profissionais
+if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new ProfissionaisController();
+    $controller->criar();
+    exit;
+}
+
+if (preg_match('/^\/profissionais\/(\d+)$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'PUT') {
+    $controller = new ProfissionaisController();
+    $controller->atualizar($matches[1]);
+    exit;
+}
+
+if (preg_match('/^\/profissionais\/(\d+)$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $controller = new ProfissionaisController();
+    $controller->excluir($matches[1]);
+    exit;
+}
+
+// Usuários
+if ($route === '/usuarios' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $controller = new UsuariosController();
+    $controller->listar();
+    exit;
+}
+
 http_response_code(404);
 header('Content-Type: application/json');
 echo json_encode(['success' => false, 'message' => 'Not Found']);

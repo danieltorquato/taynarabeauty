@@ -34,4 +34,8 @@ export const routes: Routes = [
     path: 'confirmacao',
     loadComponent: () => import('./pages/confirmacao/confirmacao.page').then( m => m.ConfirmacaoPage)
   },
+  {
+    path: 'gestao-profissionais',
+    loadComponent: () => import('./pages/gestao-profissionais/gestao-profissionais.page').then( m => m.GestaoProfissionaisPage)
+  },
 ];
