@@ -3,6 +3,7 @@ class HorariosController {
     public function listar() {
         header('Content-Type: application/json');
         $data = $_GET['data'] ?? date('Y-m-d');
+        $profissionalId = $_GET['profissional_id'] ?? null;
 
         $db = new Database();
         $conn = $db->connect();
@@ -20,18 +21,24 @@ class HorariosController {
             $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
             $stmt->execute();
             if ($stmt->rowCount() > 0) {
-                $stmt = $conn->prepare('SELECT hora, status FROM horarios_disponiveis WHERE data = :data AND status = "livre" ORDER BY hora');
-                $stmt->bindParam(':data', $data);
+                // Se profissional foi especificado e não é 0, filtrar por ele
+                if ($profissionalId && $profissionalId > 0) {
+                    $stmt = $conn->prepare('SELECT hora, status FROM horarios_disponiveis WHERE data = :data AND profissional_id = :profissional_id AND status = "livre" ORDER BY hora');
+                    $stmt->bindParam(':data', $data);
+                    $stmt->bindParam(':profissional_id', $profissionalId);
+                } else {
+                    // Se profissional_id = 0 (sem preferência), mostrar horários de todos os profissionais
+                    $stmt = $conn->prepare('SELECT hora, status FROM horarios_disponiveis WHERE data = :data AND status = "livre" ORDER BY hora');
+                    $stmt->bindParam(':data', $data);
+                }
                 $stmt->execute();
                 $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Se não há horários específicos para esta data, retornar array vazio
+                // Não mais usar horários padrão automaticamente
             } else {
-                // Return default available hours if table doesn't exist
-                $horarios = [
-                    ['hora' => '09:00:00', 'status' => 'livre'],
-                    ['hora' => '10:30:00', 'status' => 'livre'],
-                    ['hora' => '14:00:00', 'status' => 'livre'],
-                    ['hora' => '16:30:00', 'status' => 'livre']
-                ];
+                // Se a tabela não existe, retornar array vazio
+                $horarios = [];
             }
 
             echo json_encode([
@@ -313,6 +320,23 @@ class HorariosController {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao salvar alterações: ' . $e->getMessage()]);
         }
+    }
+
+    private function getHorariosPadrao() {
+        $horarios = [];
+
+        // Horários de 8:00 às 18:00, de 15 em 15 minutos
+        $horaInicio = 8; // 8:00
+        $horaFim = 18;   // 18:00
+
+        for ($hora = $horaInicio; $hora < $horaFim; $hora++) {
+            for ($minuto = 0; $minuto < 60; $minuto += 15) {
+                $timeString = sprintf('%02d:%02d:00', $hora, $minuto);
+                $horarios[] = ['hora' => $timeString, 'status' => 'livre'];
+            }
+        }
+
+        return $horarios;
     }
 
     private function ensureTableExists($conn) {

@@ -8,6 +8,7 @@ class AgendamentosController {
         $email = trim($input['email'] ?? '');
         $telefone = trim($input['telefone'] ?? '');
         $procedimento_id = (int)($input['procedimento_id'] ?? 0);
+        $profissional_id = (int)($input['profissional_id'] ?? 0);
         $data = trim($input['data'] ?? '');       // YYYY-MM-DD
         $hora = trim($input['hora'] ?? '');       // HH:MM
         $observacoes = trim($input['observacoes'] ?? '');
@@ -17,8 +18,13 @@ class AgendamentosController {
 
         if ($procedimento_id === 0 || $data === '' || $hora === '') {
             http_response_code(422);
-            echo json_encode(['success' => false, 'message' => 'Preencha procedimento, data e hora']);
+            echo json_encode(['success' => false, 'message' => 'Preencha procedimento, data e horário']);
             return;
+        }
+
+        // Se profissional_id = 0, significa "sem preferência" - usar o primeiro disponível
+        if ($profissional_id === 0) {
+            $profissional_id = 1; // Default para primeiro profissional
         }
 
         $db = new Database();
@@ -110,19 +116,23 @@ class AgendamentosController {
                 }
             }
 
-            $stmt = $conn->prepare('INSERT INTO agendamentos (usuario_id, procedimento_id, opcao_cilios, cor_cilios, opcao_labios, data, hora, observacoes, status) VALUES (:usuario_id, :procedimento_id, :opcao_cilios, :cor_cilios, :opcao_labios, :data, :hora, :observacoes, :status)');
-            $status = 'pendente';
-            $stmt->bindParam(':usuario_id', $usuario_id);
-            $stmt->bindParam(':procedimento_id', $procedimento_id);
-            $stmt->bindParam(':opcao_cilios', $opcao_cilios);
-            $stmt->bindParam(':cor_cilios', $cor_cilios);
-            $stmt->bindParam(':opcao_labios', $opcao_labios);
-            $stmt->bindParam(':data', $data);
-            $stmt->bindParam(':hora', $hora);
-            $stmt->bindParam(':observacoes', $observacoes);
-            $stmt->bindParam(':status', $status);
+                   $stmt = $conn->prepare('INSERT INTO agendamentos (usuario_id, procedimento_id, profissional_id, opcao_cilios, cor_cilios, opcao_labios, data, hora, observacoes, status) VALUES (:usuario_id, :procedimento_id, :profissional_id, :opcao_cilios, :cor_cilios, :opcao_labios, :data, :hora, :observacoes, :status)');
+                   $status = 'pendente';
+                   $stmt->bindParam(':usuario_id', $usuario_id);
+                   $stmt->bindParam(':procedimento_id', $procedimento_id);
+                   $stmt->bindParam(':profissional_id', $profissional_id);
+                   $stmt->bindParam(':opcao_cilios', $opcao_cilios);
+                   $stmt->bindParam(':cor_cilios', $cor_cilios);
+                   $stmt->bindParam(':opcao_labios', $opcao_labios);
+                   $stmt->bindParam(':data', $data);
+                   $stmt->bindParam(':hora', $hora);
+                   $stmt->bindParam(':observacoes', $observacoes);
+                   $stmt->bindParam(':status', $status);
             $stmt->execute();
             $id = (int)$conn->lastInsertId();
+
+            // Bloquear horários conflitantes baseado na duração do procedimento
+            $this->bloquearHorariosPorDuracao($conn, $data, $hora, $profissional_id, $procedimento_id);
 
             // Get procedure name for WhatsApp message
             $servicoLabel = 'Procedimento';
@@ -159,6 +169,59 @@ class AgendamentosController {
             error_log('Erro AgendamentosController::create: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao criar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    private function bloquearHorariosPorDuracao($conn, $data, $hora, $profissional_id, $procedimento_id) {
+        try {
+            // Buscar duração do procedimento (das opções selecionadas)
+            $duracao = 60; // Default 60 minutos se não encontrar
+
+            // Tentar buscar duração das opções do procedimento
+            $stmt = $conn->prepare("SHOW TABLES LIKE 'procedimento_opcoes'");
+            $stmt->execute();
+            if ($stmt->rowCount() > 0) {
+                $stmt = $conn->prepare('SELECT duracao FROM procedimento_opcoes WHERE procedimento_id = :proc_id AND duracao > 0 LIMIT 1');
+                $stmt->bindParam(':proc_id', $procedimento_id);
+                $stmt->execute();
+                $opcao = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($opcao && $opcao['duracao']) {
+                    $duracao = (int)$opcao['duracao'];
+                }
+            }
+
+            // Converter hora para DateTime
+            $dataHora = new DateTime($data . ' ' . $hora);
+            $horaInicio = $dataHora->format('H:i:s');
+
+            // Calcular horários que precisam ser bloqueados (intervalos de 15 min)
+            $horariosParaBloquear = [];
+            $tempoAtual = clone $dataHora;
+            $tempoFim = (clone $dataHora)->modify("+{$duracao} minutes");
+
+            while ($tempoAtual < $tempoFim) {
+                $horariosParaBloquear[] = $tempoAtual->format('H:i:s');
+                $tempoAtual->modify('+15 minutes');
+            }
+
+            // Verificar se tabela horarios_disponiveis existe
+            $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
+            $stmt->execute();
+            if ($stmt->rowCount() > 0) {
+                // Marcar horários como reservados
+                foreach ($horariosParaBloquear as $horaBloqueio) {
+                    $stmt = $conn->prepare('UPDATE horarios_disponiveis SET status = "reservado", procedimento_id = :proc_id WHERE data = :data AND hora = :hora AND profissional_id = :prof_id');
+                    $stmt->bindParam(':proc_id', $procedimento_id);
+                    $stmt->bindParam(':data', $data);
+                    $stmt->bindParam(':hora', $horaBloqueio);
+                    $stmt->bindParam(':prof_id', $profissional_id);
+                    $stmt->execute();
+                }
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro ao bloquear horários por duração: ' . $e->getMessage());
+            // Não interromper o fluxo se falhar o bloqueio
         }
     }
 }

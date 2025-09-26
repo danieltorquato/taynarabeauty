@@ -101,8 +101,6 @@ class AdminController {
                       COALESCE(u.nome, "Cliente") as cliente_nome,
                       COALESCE(u.email, "") as cliente_email,
                       COALESCE(p.nome, "Procedimento") as procedimento_nome,
-                      COALESCE(p.preco_centavos, 0) as preco_centavos,
-                      COALESCE(p.duracao_min, 0) as duracao_min,
                       a.opcao_cilios, a.cor_cilios, a.opcao_labios
                     FROM agendamentos a
                     LEFT JOIN usuarios u ON a.usuario_id = u.id

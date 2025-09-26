@@ -52,6 +52,12 @@ if ($route === '/procedimentos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
+if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $controller = new ProfissionaisController();
+    $controller->listar();
+    exit;
+}
+
 if ($route === '/horarios' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new HorariosController();
     $controller->listar();

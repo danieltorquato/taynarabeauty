@@ -18,6 +18,7 @@ export class ApiService {
 
   createAppointment(payload: {
     procedimento_id: number;
+    profissional_id: number;
     data: string; // YYYY-MM-DD
     hora: string; // HH:MM
     observacoes?: string;
@@ -35,8 +36,19 @@ export class ApiService {
     return this.http.get(url);
   }
 
-  getHorarios(data: string): Observable<any> {
-    const url = `${this.baseUrl}/horarios?data=${data}`;
+  getProfissionais(procedimentoId?: number): Observable<any> {
+    let url = `${this.baseUrl}/profissionais`;
+    if (procedimentoId) {
+      url += `?procedimento_id=${procedimentoId}`;
+    }
+    return this.http.get(url);
+  }
+
+  getHorarios(data: string, profissionalId?: number): Observable<any> {
+    let url = `${this.baseUrl}/horarios?data=${data}`;
+    if (profissionalId) {
+      url += `&profissional_id=${profissionalId}`;
+    }
     return this.http.get(url);
   }
 
