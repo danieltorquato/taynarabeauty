@@ -102,20 +102,106 @@
 
           <div class="competencias-section">
             <h3>Competências</h3>
-            <p>Selecione os procedimentos que este profissional pode realizar:</p>
+            <p>Selecione os procedimentos específicos que este profissional pode realizar:</p>
 
-            <div class="competencias-grid">
-              <div
-                *ngFor="let procedimento of procedimentos"
-                class="competencia-item"
-                [class.selected]="temCompetencia(procedimento.id)"
-                (click)="toggleCompetencia(procedimento.id)">
-                <ion-checkbox
-                  [checked]="temCompetencia(procedimento.id)"
-                  (ionChange)="toggleCompetencia(procedimento.id)">
-                </ion-checkbox>
-                <span class="competencia-categoria">{{ procedimento.nome }}</span>
-                <ion-chip class="competencia-categoria">{{ procedimento.categoria }}</ion-chip>
+            <!-- Cílios -->
+            <div class="categoria-section" *ngIf="getProcedimentosPorCategoria('cilios').length > 0">
+              <h4>👁️ Cílios</h4>
+              <div class="competencias-grid">
+                <div
+                  *ngFor="let procedimento of getProcedimentosPorCategoria('cilios')"
+                  class="competencia-item"
+                  [class.selected]="temCompetencia(procedimento.id)"
+                  (click)="toggleCompetencia(procedimento.id)">
+                  <ion-checkbox
+                    [checked]="temCompetencia(procedimento.id)"
+                    (ionChange)="toggleCompetencia(procedimento.id)">
+                  </ion-checkbox>
+                  <span class="competencia-nome">{{ procedimento.nome }}</span>
+                  <ion-chip color="primary" class="competencia-categoria">Cílios</ion-chip>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lábios -->
+            <div class="categoria-section" *ngIf="getProcedimentosPorCategoria('labios').length > 0">
+              <h4>💋 Lábios</h4>
+              <div class="competencias-grid">
+                <div
+                  *ngFor="let procedimento of getProcedimentosPorCategoria('labios')"
+                  class="competencia-item"
+                  [class.selected]="temCompetencia(procedimento.id)"
+                  (click)="toggleCompetencia(procedimento.id)">
+                  <ion-checkbox
+                    [checked]="temCompetencia(procedimento.id)"
+                    (ionChange)="toggleCompetencia(procedimento.id)">
+                  </ion-checkbox>
+                  <span class="competencia-nome">{{ procedimento.nome }}</span>
+                  <ion-chip color="secondary" class="competencia-categoria">Lábios</ion-chip>
+                </div>
+              </div>
+            </div>
+
+            <!-- Combo -->
+            <div class="categoria-section" *ngIf="getProcedimentosPorCategoria('combo').length > 0">
+              <h4>🎯 Combo</h4>
+              <div class="competencias-grid">
+                <div
+                  *ngFor="let procedimento of getProcedimentosPorCategoria('combo')"
+                  class="competencia-item"
+                  [class.selected]="temCompetencia(procedimento.id)"
+                  (click)="toggleCompetencia(procedimento.id)">
+                  <ion-checkbox
+                    [checked]="temCompetencia(procedimento.id)"
+                    (ionChange)="toggleCompetencia(procedimento.id)">
+                  </ion-checkbox>
+                  <span class="competencia-nome">{{ procedimento.nome }}</span>
+                  <ion-chip color="tertiary" class="competencia-categoria">Combo</ion-chip>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opções Específicas do Combo -->
+            <div class="opcoes-especificas" *ngIf="temCompetenciaCombo()">
+              <h5>Opções Específicas do Combo:</h5>
+              <p class="opcoes-descricao">Selecione quais tipos específicos de cílios e lábios este profissional pode fazer no combo:</p>
+
+              <!-- Opções de Cílios no Combo -->
+              <div class="opcoes-cilios" *ngIf="getOpcoesCombo('cilios_tipo').length > 0">
+                <h6>Tipos de Cílios:</h6>
+                <div class="opcoes-grid">
+                  <div
+                    *ngFor="let opcao of getOpcoesCombo('cilios_tipo')"
+                    class="opcao-item"
+                    [class.selected]="temOpcaoCombo(opcao.value)"
+                    (click)="toggleOpcaoCombo(opcao.value, 'cilios_tipo')">
+                    <ion-checkbox
+                      [checked]="temOpcaoCombo(opcao.value)"
+                      (ionChange)="toggleOpcaoCombo(opcao.value, 'cilios_tipo')">
+                    </ion-checkbox>
+                    <span class="opcao-nome">{{ opcao.label }}</span>
+                    <span class="opcao-preco">{{ formatarPreco(opcao.preco_centavos) }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Opções de Lábios no Combo -->
+              <div class="opcoes-labios" *ngIf="getOpcoesCombo('labios_tipo').length > 0">
+                <h6>Tipos de Lábios:</h6>
+                <div class="opcoes-grid">
+                  <div
+                    *ngFor="let opcao of getOpcoesCombo('labios_tipo')"
+                    class="opcao-item"
+                    [class.selected]="temOpcaoCombo(opcao.value)"
+                    (click)="toggleOpcaoCombo(opcao.value, 'labios_tipo')">
+                    <ion-checkbox
+                      [checked]="temOpcaoCombo(opcao.value)"
+                      (ionChange)="toggleOpcaoCombo(opcao.value, 'labios_tipo')">
+                    </ion-checkbox>
+                    <span class="opcao-nome">{{ opcao.label }}</span>
+                    <span class="opcao-preco">{{ formatarPreco(opcao.preco_centavos) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

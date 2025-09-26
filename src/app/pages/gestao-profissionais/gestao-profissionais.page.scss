@@ -275,3 +275,118 @@ ion-header ion-toolbar {
     color: #2b1130;
   }
 }
+
+// Novos estilos para categorias
+.categoria-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.categoria-section h4 {
+  margin: 0 0 16px 0;
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.competencia-nome {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+// Estilos para opções específicas do combo
+.opcoes-especificas {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f0f8ff;
+  border-radius: 12px;
+  border: 1px solid #b3d9ff;
+}
+
+.opcoes-especificas h5 {
+  margin: 0 0 8px 0;
+  color: #0066cc;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.opcoes-descricao {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.opcoes-cilios, .opcoes-labios {
+  margin-bottom: 16px;
+}
+
+.opcoes-cilios h6, .opcoes-labios h6 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.opcoes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.opcao-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  font-size: 0.85rem;
+}
+
+.opcao-item:hover {
+  border-color: #f28cb4;
+  background: #fef7f7;
+}
+
+.opcao-item.selected {
+  border-color: #f28cb4;
+  background: #fef7f7;
+  box-shadow: 0 1px 4px rgba(242, 140, 180, 0.2);
+}
+
+.opcao-nome {
+  flex: 1;
+  font-weight: 500;
+  color: #333;
+}
+
+.opcao-preco {
+  font-size: 0.8rem;
+  color: #28a745;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .opcoes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .categoria-section {
+    padding: 12px;
+  }
+
+  .opcoes-especificas {
+    padding: 12px;
+  }
+}

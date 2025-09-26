@@ -7,16 +7,74 @@
 <ion-content>
   <div class="admin-container">
 
-    <!-- Seletor de Data -->
+    <!-- Seletor de Data e Configurações -->
     <ion-card class="date-card">
       <ion-card-content>
         <ion-item>
           <ion-label position="stacked">Selecionar Data</ion-label>
           <ion-input type="date" [(ngModel)]="selectedDate" (ionInput)="onDateChange()"></ion-input>
         </ion-item>
-        <div class="date-actions">
-          <ion-button size="small" (click)="liberarTodosHorarios()">Liberar Todos</ion-button>
-          <ion-button size="small" color="danger" (click)="bloquearTodosHorarios()">Bloquear Todos</ion-button>
+
+        <!-- Seção de Liberação Rápida -->
+        <div class="quick-actions">
+          <h4>Liberação Rápida</h4>
+          <div class="action-buttons">
+            <ion-button size="small" (click)="liberarTodosHorarios()">
+              📅 Liberar Todos
+            </ion-button>
+            <ion-button size="small" color="danger" (click)="bloquearTodosHorarios()">
+              🚫 Bloquear Todos
+            </ion-button>
+          </div>
+        </div>
+
+        <!-- Seção de Liberação Específica -->
+        <div class="specific-actions">
+          <h4>Liberação Específica</h4>
+
+          <ion-item>
+            <ion-label position="stacked">Profissional</ion-label>
+            <ion-select [(ngModel)]="selectedProfissional" (ionChange)="onProfissionalChange()" placeholder="Selecionar profissional">
+              <ion-select-option value="0">Todos os profissionais</ion-select-option>
+              <ion-select-option *ngFor="let prof of profissionais" [value]="prof.id">
+                {{ prof.nome }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Procedimento</ion-label>
+            <ion-select [(ngModel)]="selectedProcedimento" placeholder="Selecionar procedimento">
+              <ion-select-option value="0">Todos os procedimentos</ion-select-option>
+              <ion-select-option *ngFor="let proc of procedimentosFiltrados" [value]="proc.id">
+                {{ proc.nome }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <!-- Indicador de filtro ativo -->
+          <div *ngIf="selectedProfissional !== '0' && procedimentosFiltrados.length < procedimentos.length" class="filter-indicator">
+            <small>📋 Mostrando apenas procedimentos que {{ getProfissionalNome() }} pode realizar</small>
+          </div>
+
+          <ion-item>
+            <ion-label position="stacked">Horário Inicial</ion-label>
+            <ion-input type="time" [(ngModel)]="horarioInicial" placeholder="08:00"></ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Horário Final</ion-label>
+            <ion-input type="time" [(ngModel)]="horarioFinal" placeholder="18:00"></ion-input>
+          </ion-item>
+
+          <div class="specific-action-buttons">
+            <ion-button expand="block" color="success" (click)="liberarHorariosEspecificos()">
+              ✅ Liberar Horários Específicos
+            </ion-button>
+            <ion-button expand="block" color="warning" (click)="liberarSemanaEspecifica()">
+              📆 Liberar Semana (Profissional + Procedimento)
+            </ion-button>
+          </div>
         </div>
 
         <!-- Indicador de alterações pendentes -->

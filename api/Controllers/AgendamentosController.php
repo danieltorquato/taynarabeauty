@@ -208,14 +208,32 @@ class AgendamentosController {
             $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
             $stmt->execute();
             if ($stmt->rowCount() > 0) {
-                // Marcar horários como reservados
+                // Marcar horários como reservados APENAS para o profissional específico
                 foreach ($horariosParaBloquear as $horaBloqueio) {
-                    $stmt = $conn->prepare('UPDATE horarios_disponiveis SET status = "reservado", procedimento_id = :proc_id WHERE data = :data AND hora = :hora AND profissional_id = :prof_id');
-                    $stmt->bindParam(':proc_id', $procedimento_id);
+                    // Primeiro, verificar se o horário existe para este profissional
+                    $stmt = $conn->prepare('SELECT id FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :prof_id');
                     $stmt->bindParam(':data', $data);
                     $stmt->bindParam(':hora', $horaBloqueio);
                     $stmt->bindParam(':prof_id', $profissional_id);
                     $stmt->execute();
+
+                    if ($stmt->rowCount() > 0) {
+                        // Se existe, atualizar para reservado
+                        $stmt = $conn->prepare('UPDATE horarios_disponiveis SET status = "reservado", procedimento_id = :proc_id WHERE data = :data AND hora = :hora AND profissional_id = :prof_id');
+                        $stmt->bindParam(':proc_id', $procedimento_id);
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $horaBloqueio);
+                        $stmt->bindParam(':prof_id', $profissional_id);
+                        $stmt->execute();
+                    } else {
+                        // Se não existe, criar como reservado
+                        $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id) VALUES (:data, :hora, :prof_id, "reservado", :proc_id)');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $horaBloqueio);
+                        $stmt->bindParam(':prof_id', $profissional_id);
+                        $stmt->bindParam(':proc_id', $procedimento_id);
+                        $stmt->execute();
+                    }
                 }
             }
 

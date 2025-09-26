@@ -127,20 +127,35 @@ class ProfissionaisController {
             }
         }
 
+        // Sara (ID 3) - Especialista em lábios (procedimento_id 4)
+        if (in_array($procedimentoId, [4])) {
+            $stmt = $conn->prepare('SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome FROM profissionais p LEFT JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = 3 AND p.ativo = 1');
+            $stmt->execute();
+            $sara = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($sara) {
+                $profissionais[] = $sara;
+            }
+        }
+
         return $profissionais;
     }
 
     private function getProfissionaisDemo($procedimentoId) {
         $profissionais = [];
 
-        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 4, 5, 6)
-        if (!$procedimentoId || in_array($procedimentoId, [1, 2, 3, 4, 5, 6])) {
+        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)
+        if (!$procedimentoId || in_array($procedimentoId, [1, 2, 3, 5, 6])) {
             $profissionais[] = ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara'];
         }
 
         // Mayara (ID 2) - Especialista em lábios (procedimento_id 4)
         if (!$procedimentoId || in_array($procedimentoId, [4])) {
             $profissionais[] = ['id' => 2, 'nome' => 'Mayara Casagrande', 'usuario_id' => 4, 'usuario_nome' => 'Mayara'];
+        }
+
+        // Sara (ID 3) - Especialista em lábios (procedimento_id 4)
+        if (!$procedimentoId || in_array($procedimentoId, [4])) {
+            $profissionais[] = ['id' => 3, 'nome' => 'Sara Casagrande', 'usuario_id' => 5, 'usuario_nome' => 'Sara'];
         }
 
         return $profissionais;

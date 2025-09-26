@@ -44,10 +44,13 @@ export class ApiService {
     return this.http.get(url);
   }
 
-  getHorarios(data: string, profissionalId?: number): Observable<any> {
+  getHorarios(data: string, profissionalId?: number, procedimentoId?: number): Observable<any> {
     let url = `${this.baseUrl}/horarios?data=${data}`;
     if (profissionalId) {
       url += `&profissional_id=${profissionalId}`;
+    }
+    if (procedimentoId) {
+      url += `&procedimento_id=${procedimentoId}`;
     }
     return this.http.get(url);
   }
@@ -92,7 +95,12 @@ export class ApiService {
     return this.http.post(url, { data }, { headers });
   }
 
-  salvarHorariosBatch(batchData: {data: string, alteracoes: Array<{time: string, status: 'livre' | 'bloqueado'}>}): Observable<any> {
+  salvarHorariosBatch(batchData: {
+    data: string,
+    alteracoes: Array<{time: string, status: 'livre' | 'bloqueado'}>,
+    profissional_id?: number,
+    procedimento_id?: number
+  }): Observable<any> {
     const url = `${this.baseUrl}/admin/horarios/salvar-batch`;
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http.post(url, batchData, { headers });

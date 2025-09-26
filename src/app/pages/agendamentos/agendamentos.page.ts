@@ -184,14 +184,10 @@ export class AgendamentoPage implements OnInit {
   onDateChange() {
     if (this.selectedDate) {
       const date = new Date(this.selectedDate).toISOString().split('T')[0];
-      console.log('📅 Buscando horários para data:', date);
+      console.log('📅 Buscando horários para data:', date, 'profissional:', this.selectedProfissional, 'procedimento:', this.selectedProcedimento);
 
-
-
-      this.api.getHorarios(date, this.selectedProfissional).subscribe({
+      this.api.getHorarios(date, this.selectedProfissional, this.selectedProcedimento).subscribe({
         next: (res) => {
-
-
           if (res.success) {
             this.horariosDisponiveis = res.horarios.map((h: any) => h.hora.substring(0, 5));
             console.log('⏰ Horários carregados:', this.horariosDisponiveis);

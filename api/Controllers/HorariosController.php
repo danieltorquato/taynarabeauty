@@ -4,6 +4,7 @@ class HorariosController {
         header('Content-Type: application/json');
         $data = $_GET['data'] ?? date('Y-m-d');
         $profissionalId = $_GET['profissional_id'] ?? null;
+        $procedimentoId = $_GET['procedimento_id'] ?? null;
 
         $db = new Database();
         $conn = $db->connect();
@@ -21,16 +22,30 @@ class HorariosController {
             $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
             $stmt->execute();
             if ($stmt->rowCount() > 0) {
+                // Construir query baseada nos parâmetros fornecidos
+                $whereConditions = ['data = :data', 'status = "livre"'];
+                $params = [':data' => $data];
+
                 // Se profissional foi especificado e não é 0, filtrar por ele
                 if ($profissionalId && $profissionalId > 0) {
-                    $stmt = $conn->prepare('SELECT hora, status FROM horarios_disponiveis WHERE data = :data AND profissional_id = :profissional_id AND status = "livre" ORDER BY hora');
-                    $stmt->bindParam(':data', $data);
-                    $stmt->bindParam(':profissional_id', $profissionalId);
-                } else {
-                    // Se profissional_id = 0 (sem preferência), mostrar horários de todos os profissionais
-                    $stmt = $conn->prepare('SELECT hora, status FROM horarios_disponiveis WHERE data = :data AND status = "livre" ORDER BY hora');
-                    $stmt->bindParam(':data', $data);
+                    $whereConditions[] = 'profissional_id = :profissional_id';
+                    $params[':profissional_id'] = $profissionalId;
                 }
+
+                // Se procedimento foi especificado, filtrar por ele
+                if ($procedimentoId && $procedimentoId > 0) {
+                    $whereConditions[] = 'procedimento_id = :procedimento_id';
+                    $params[':procedimento_id'] = $procedimentoId;
+                }
+
+                $sql = 'SELECT hora, status FROM horarios_disponiveis WHERE ' . implode(' AND ', $whereConditions) . ' ORDER BY hora';
+                $stmt = $conn->prepare($sql);
+
+                // Bind dos parâmetros
+                foreach ($params as $key => $value) {
+                    $stmt->bindValue($key, $value);
+                }
+
                 $stmt->execute();
                 $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -262,6 +277,8 @@ class HorariosController {
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
         $data = $input['data'] ?? null;
         $alteracoes = $input['alteracoes'] ?? [];
+        $profissionalId = $input['profissional_id'] ?? null;
+        $procedimentoId = $input['procedimento_id'] ?? null;
 
         if (!$data || empty($alteracoes)) {
             http_response_code(422);
@@ -293,16 +310,31 @@ class HorariosController {
                 }
 
                 if ($status === 'livre') {
-                    // Insert or update to 'livre'
-                    $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, status) VALUES (:data, :hora, "livre") ON DUPLICATE KEY UPDATE status = "livre"');
-                    $stmt->bindParam(':data', $data);
-                    $stmt->bindParam(':hora', $hora);
+                    // Insert or update to 'livre' - incluir profissional_id se fornecido
+                    if ($profissionalId) {
+                        $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id) VALUES (:data, :hora, :profissional_id, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $hora);
+                        $stmt->bindParam(':profissional_id', $profissionalId);
+                        $stmt->bindParam(':procedimento_id', $procedimentoId);
+                    } else {
+                        $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, status) VALUES (:data, :hora, "livre") ON DUPLICATE KEY UPDATE status = "livre"');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $hora);
+                    }
                     $stmt->execute();
                 } else if ($status === 'bloqueado') {
-                    // Remove from available hours (blocking it)
-                    $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora');
-                    $stmt->bindParam(':data', $data);
-                    $stmt->bindParam(':hora', $hora);
+                    // Remove from available hours (blocking it) - incluir profissional_id se fornecido
+                    if ($profissionalId) {
+                        $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :profissional_id');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $hora);
+                        $stmt->bindParam(':profissional_id', $profissionalId);
+                    } else {
+                        $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $hora);
+                    }
                     $stmt->execute();
                 }
             }

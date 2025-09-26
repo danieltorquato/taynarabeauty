@@ -18,6 +18,7 @@ export class GestaoProfissionaisPage implements OnInit {
   profissionais: any[] = [];
   usuarios: any[] = [];
   procedimentos: any[] = [];
+  opcoesCombo: any = {};
 
   // Formulário de novo profissional
   novoProfissional = {
@@ -25,6 +26,7 @@ export class GestaoProfissionaisPage implements OnInit {
     usuario_id: null,
     ativo: true,
     competencias: [] as number[],
+    opcoesCombo: [] as string[], // Para armazenar opções específicas do combo
     foto: ''
   };
 
@@ -73,6 +75,7 @@ export class GestaoProfissionaisPage implements OnInit {
       next: (res) => {
         if (res.success) {
           this.procedimentos = res.procedimentos;
+          this.opcoesCombo = res.opcoes || {};
         }
       },
       error: (err) => {
@@ -88,6 +91,7 @@ export class GestaoProfissionaisPage implements OnInit {
       usuario_id: null,
       ativo: true,
       competencias: [],
+      opcoesCombo: [],
       foto: ''
     };
     this.isModalOpen = true;
@@ -101,6 +105,7 @@ export class GestaoProfissionaisPage implements OnInit {
       usuario_id: profissional.usuario_id,
       ativo: profissional.ativo,
       competencias: profissional.competencias || [],
+      opcoesCombo: profissional.opcoesCombo || [],
       foto: profissional.foto || ''
     };
     this.isModalOpen = true;
@@ -227,5 +232,43 @@ export class GestaoProfissionaisPage implements OnInit {
       return 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face';
     }
     return 'https://via.placeholder.com/150x150/f28cb4/ffffff?text=' + encodeURIComponent(profissional.nome.charAt(0));
+  }
+
+  // Novos métodos para gestão de competências por categoria
+  getProcedimentosPorCategoria(categoria: string): any[] {
+    return this.procedimentos.filter(p => p.categoria === categoria);
+  }
+
+  temCompetenciaCombo(): boolean {
+    return this.novoProfissional.competencias.some(id => {
+      const proc = this.procedimentos.find(p => p.id === id);
+      return proc && proc.categoria === 'combo';
+    });
+  }
+
+  getOpcoesCombo(tipo: string): any[] {
+    const comboId = this.procedimentos.find(p => p.categoria === 'combo')?.id;
+    if (!comboId || !this.opcoesCombo[comboId]) {
+      return [];
+    }
+    return this.opcoesCombo[comboId].filter((opcao: any) => opcao.tipo === tipo);
+  }
+
+  temOpcaoCombo(value: string): boolean {
+    return this.novoProfissional.opcoesCombo.includes(value);
+  }
+
+  toggleOpcaoCombo(value: string, tipo: string) {
+    const index = this.novoProfissional.opcoesCombo.indexOf(value);
+    if (index > -1) {
+      this.novoProfissional.opcoesCombo.splice(index, 1);
+    } else {
+      this.novoProfissional.opcoesCombo.push(value);
+    }
+  }
+
+  formatarPreco(centavos: number): string {
+    if (!centavos) return '';
+    return `R$ ${(centavos / 100).toFixed(2).replace('.', ',')}`;
   }
 }
