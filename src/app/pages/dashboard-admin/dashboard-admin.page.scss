@@ -65,6 +65,16 @@
   font-size: 0.85rem;
 }
 
+.professional-filter-indicator {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  color: #1565c0;
+  font-size: 0.85rem;
+}
+
 @media (min-width: 768px) {
   .specific-action-buttons {
     flex-direction: row;
@@ -154,6 +164,23 @@
   cursor: default;
 }
 
+.time-slot.almoco {
+  background: #fff9e6;
+  border-color: #cc8800;
+  color: #cc8800;
+  cursor: not-allowed;
+  opacity: 0.7;
+  position: relative;
+}
+
+.time-slot.almoco::after {
+  content: '🍽️';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.8rem;
+}
+
 .time-slot .time {
   font-weight: 600;
   font-size: 0.9rem;
@@ -225,6 +252,10 @@
 
 .legend-dot.booked {
   background: #2196f3;
+}
+
+.legend-dot.almoco {
+  background: #cc8800;
 }
 
 .status-badge {

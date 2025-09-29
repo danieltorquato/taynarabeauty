@@ -276,6 +276,42 @@ ion-header ion-toolbar {
   }
 }
 
+// Estilos para seção de horário de almoço
+.almoco-section {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #fff9e6;
+  border-radius: 12px;
+  border: 1px solid #ffe066;
+}
+
+.almoco-section h3 {
+  margin: 0 0 8px 0;
+  color: #cc8800;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.almoco-section p {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.almoco-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .almoco-inputs {
+    grid-template-columns: 1fr;
+  }
+}
+
 // Novos estilos para categorias
 .categoria-section {
   margin-bottom: 24px;

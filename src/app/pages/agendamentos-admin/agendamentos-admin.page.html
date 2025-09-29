@@ -1,0 +1,217 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Gerenciar Agendamentos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="container">
+    <!-- Filtros -->
+    <ion-card class="filters-card">
+      <ion-card-content>
+        <div class="filters">
+          <div class="filter-item">
+            <ion-label>Data:</ion-label>
+            <ion-datetime
+              [(ngModel)]="selectedDate"
+              (ionChange)="onDateChange()"
+              presentation="date"
+              [max]="maxDate"
+              [value]="selectedDate">
+            </ion-datetime>
+          </div>
+
+          <div class="filter-item">
+            <ion-label>Profissional:</ion-label>
+            <ion-select
+              [(ngModel)]="selectedProfissional"
+              (ionChange)="onProfissionalChange()"
+              placeholder="Selecionar profissional">
+              <ion-select-option value="todos">Todos os profissionais</ion-select-option>
+              <ion-select-option
+                *ngFor="let prof of profissionais"
+                [value]="prof.id">
+                {{ prof.nome }}
+              </ion-select-option>
+            </ion-select>
+          </div>
+
+          <ion-button
+            fill="clear"
+            (click)="carregarAgendamentos()"
+            [disabled]="loading">
+            <ion-icon name="refresh-outline" slot="start"></ion-icon>
+            Atualizar
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Lista de Agendamentos -->
+    <div *ngIf="loading" class="loading">
+      <ion-icon name="time-outline"></ion-icon>
+      <p>Carregando agendamentos...</p>
+    </div>
+
+    <div *ngIf="!loading && agendamentos.length === 0" class="empty-state">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <h2>Nenhum agendamento encontrado</h2>
+      <p>Não há agendamentos para a data e profissional selecionados.</p>
+    </div>
+
+    <div *ngIf="!loading && agendamentos.length > 0" class="agendamentos-list">
+      <ion-card *ngFor="let agendamento of agendamentos" class="agendamento-card">
+        <ion-card-header>
+          <div class="agendamento-header">
+            <div class="agendamento-info">
+              <h3>{{ agendamento.procedimento_nome }}</h3>
+              <p class="cliente">
+                <ion-icon name="person-outline"></ion-icon>
+                {{ agendamento.cliente_nome }}
+              </p>
+              <p class="profissional">
+                <ion-icon name="person-outline"></ion-icon>
+                {{ agendamento.profissional_nome || 'Profissional Não Atribuído' }}
+              </p>
+            </div>
+            <ion-chip [color]="getStatusColor(agendamento.status)">
+              {{ getStatusText(agendamento.status) }}
+            </ion-chip>
+          </div>
+        </ion-card-header>
+
+        <ion-card-content>
+          <div class="agendamento-details">
+            <div class="detail-item">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <span>{{ formatarData(agendamento.data) }}</span>
+            </div>
+            <div class="detail-item">
+              <ion-icon name="time-outline"></ion-icon>
+              <span>{{ formatarHora(agendamento.hora) }}</span>
+            </div>
+          </div>
+
+          <div class="agendamento-actions">
+            <ion-button
+              fill="clear"
+              size="small"
+              (click)="verDetalhes(agendamento)">
+              <ion-icon name="information-circle-outline" slot="start"></ion-icon>
+              Detalhes
+            </ion-button>
+
+            <ion-button
+              *ngIf="agendamento.status === 'pendente'"
+              fill="clear"
+              color="success"
+              size="small"
+              (click)="aprovarAgendamento(agendamento)">
+              <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+              Aprovar
+            </ion-button>
+
+            <ion-button
+              *ngIf="agendamento.status === 'pendente'"
+              fill="clear"
+              color="danger"
+              size="small"
+              (click)="rejeitarAgendamento(agendamento)">
+              <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+              Rejeitar
+            </ion-button>
+
+            <ion-button
+              *ngIf="agendamento.status === 'confirmado'"
+              fill="clear"
+              color="warning"
+              size="small"
+              (click)="marcarFalta(agendamento)">
+              <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+              Marcar Falta
+            </ion-button>
+
+            <ion-button
+              *ngIf="agendamento.status === 'confirmado'"
+              fill="clear"
+              color="danger"
+              size="small"
+              (click)="cancelarAgendamento(agendamento)">
+              <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+              Cancelar
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- Modal de Detalhes -->
+  <div class="modal-overlay" *ngIf="showDetails" (click)="fecharDetalhes()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Detalhes do Agendamento</h2>
+        <ion-button fill="clear" (click)="fecharDetalhes()">
+          <ion-icon name="close-circle-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="modal-body" *ngIf="selectedAgendamento">
+        <div class="detail-section">
+          <h3>Cliente</h3>
+          <p>{{ selectedAgendamento.cliente_nome }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Procedimento</h3>
+          <p>{{ selectedAgendamento.procedimento_nome }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Profissional</h3>
+          <p>{{ getProfissionalNome(selectedAgendamento.profissional_id) }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Data e Horário</h3>
+          <p>{{ formatarData(selectedAgendamento.data) }} às {{ formatarHora(selectedAgendamento.hora) }}</p>
+        </div>
+
+        <div class="detail-section" *ngIf="selectedAgendamento.observacoes">
+          <h3>Observações</h3>
+          <p>{{ selectedAgendamento.observacoes }}</p>
+        </div>
+
+        <div class="detail-section">
+          <h3>Status</h3>
+          <ion-chip [color]="getStatusColor(selectedAgendamento.status)">
+            {{ getStatusText(selectedAgendamento.status) }}
+          </ion-chip>
+        </div>
+
+        <div class="modal-actions">
+          <ion-button
+            *ngIf="selectedAgendamento.status === 'pendente'"
+            fill="solid"
+            color="success"
+            (click)="aprovarAgendamento(selectedAgendamento)">
+            <ion-icon name="checkmark-circle-outline" slot="start"></ion-icon>
+            Aprovar
+          </ion-button>
+
+          <ion-button
+            *ngIf="selectedAgendamento.status === 'pendente'"
+            fill="outline"
+            color="danger"
+            (click)="rejeitarAgendamento(selectedAgendamento)">
+            <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+            Rejeitar
+          </ion-button>
+        </div>
+      </div>
+    </div>
+  </div>
+</ion-content>

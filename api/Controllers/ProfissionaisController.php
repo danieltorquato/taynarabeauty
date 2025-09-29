@@ -26,15 +26,15 @@ class ProfissionaisController {
                     // Filtrar profissionais por especialização baseada no procedimento
                     $profissionais = $this->getProfissionaisPorProcedimento($conn, $procedimentoId);
                 } else {
-                // Buscar todos os profissionais ativos com competências
-                $stmt = $conn->prepare('
-                    SELECT p.id, p.nome, p.usuario_id, p.ativo, p.foto, u.nome as usuario_nome
-                    FROM profissionais p
-                    LEFT JOIN usuarios u ON p.usuario_id = u.id
-                    ORDER BY p.nome
-                ');
-                $stmt->execute();
-                $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                       // Buscar todos os profissionais ativos com competências e horário de almoço
+                       $stmt = $conn->prepare('
+                           SELECT p.id, p.nome, p.usuario_id, p.ativo, p.foto, p.almoco_inicio, p.almoco_fim, u.nome as usuario_nome
+                           FROM profissionais p
+                           LEFT JOIN usuarios u ON p.usuario_id = u.id
+                           ORDER BY p.nome
+                       ');
+                       $stmt->execute();
+                       $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // Buscar competências para cada profissional
                 foreach ($profissionais as &$prof) {
@@ -170,6 +170,8 @@ class ProfissionaisController {
         $ativo = (bool)($input['ativo'] ?? true);
         $competencias = $input['competencias'] ?? [];
         $foto = trim($input['foto'] ?? '');
+        $almoco_inicio = trim($input['almoco_inicio'] ?? '12:00:00');
+        $almoco_fim = trim($input['almoco_fim'] ?? '13:00:00');
 
         if ($nome === '' || $usuario_id === 0) {
             http_response_code(422);
@@ -190,11 +192,13 @@ class ProfissionaisController {
             $conn->beginTransaction();
 
             // Inserir profissional
-            $stmt = $conn->prepare('INSERT INTO profissionais (nome, usuario_id, ativo, foto) VALUES (:nome, :usuario_id, :ativo, :foto)');
+            $stmt = $conn->prepare('INSERT INTO profissionais (nome, usuario_id, ativo, foto, almoco_inicio, almoco_fim) VALUES (:nome, :usuario_id, :ativo, :foto, :almoco_inicio, :almoco_fim)');
             $stmt->bindParam(':nome', $nome);
             $stmt->bindParam(':usuario_id', $usuario_id);
             $stmt->bindParam(':ativo', $ativo, PDO::PARAM_BOOL);
             $stmt->bindParam(':foto', $foto);
+            $stmt->bindParam(':almoco_inicio', $almoco_inicio);
+            $stmt->bindParam(':almoco_fim', $almoco_fim);
             $stmt->execute();
             $profissional_id = (int)$conn->lastInsertId();
 
@@ -232,6 +236,8 @@ class ProfissionaisController {
         $ativo = (bool)($input['ativo'] ?? true);
         $competencias = $input['competencias'] ?? [];
         $foto = trim($input['foto'] ?? '');
+        $almoco_inicio = trim($input['almoco_inicio'] ?? '12:00:00');
+        $almoco_fim = trim($input['almoco_fim'] ?? '13:00:00');
 
         if ($nome === '' || $usuario_id === 0) {
             http_response_code(422);
@@ -252,11 +258,13 @@ class ProfissionaisController {
             $conn->beginTransaction();
 
             // Atualizar profissional
-            $stmt = $conn->prepare('UPDATE profissionais SET nome = :nome, usuario_id = :usuario_id, ativo = :ativo, foto = :foto WHERE id = :id');
+            $stmt = $conn->prepare('UPDATE profissionais SET nome = :nome, usuario_id = :usuario_id, ativo = :ativo, foto = :foto, almoco_inicio = :almoco_inicio, almoco_fim = :almoco_fim WHERE id = :id');
             $stmt->bindParam(':nome', $nome);
             $stmt->bindParam(':usuario_id', $usuario_id);
             $stmt->bindParam(':ativo', $ativo, PDO::PARAM_BOOL);
             $stmt->bindParam(':foto', $foto);
+            $stmt->bindParam(':almoco_inicio', $almoco_inicio);
+            $stmt->bindParam(':almoco_fim', $almoco_fim);
             $stmt->bindParam(':id', $id);
             $stmt->execute();
 

@@ -27,7 +27,9 @@ export class GestaoProfissionaisPage implements OnInit {
     ativo: true,
     competencias: [] as number[],
     opcoesCombo: [] as string[], // Para armazenar opções específicas do combo
-    foto: ''
+    foto: '',
+    almoco_inicio: '12:00',
+    almoco_fim: '13:00'
   };
 
   // Formulário de edição
@@ -92,7 +94,9 @@ export class GestaoProfissionaisPage implements OnInit {
       ativo: true,
       competencias: [],
       opcoesCombo: [],
-      foto: ''
+      foto: '',
+      almoco_inicio: '12:00',
+      almoco_fim: '13:00'
     };
     this.isModalOpen = true;
   }
@@ -106,7 +110,9 @@ export class GestaoProfissionaisPage implements OnInit {
       ativo: profissional.ativo,
       competencias: profissional.competencias || [],
       opcoesCombo: profissional.opcoesCombo || [],
-      foto: profissional.foto || ''
+      foto: profissional.foto || '',
+      almoco_inicio: profissional.almoco_inicio || '12:00',
+      almoco_fim: profissional.almoco_fim || '13:00'
     };
     this.isModalOpen = true;
   }
@@ -231,7 +237,15 @@ export class GestaoProfissionaisPage implements OnInit {
     } else if (profissional.id == 2) {
       return 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face';
     }
-    return 'https://via.placeholder.com/150x150/f28cb4/ffffff?text=' + encodeURIComponent(profissional.nome.charAt(0));
+    // Usar uma imagem SVG local em vez de placeholder externo
+    return 'data:image/svg+xml;base64,' + btoa(`
+      <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+        <rect width="150" height="150" fill="#f28cb4"/>
+        <text x="75" y="80" font-family="Arial, sans-serif" font-size="60" font-weight="bold" text-anchor="middle" fill="white">
+          ${profissional.nome.charAt(0).toUpperCase()}
+        </text>
+      </svg>
+    `);
   }
 
   // Novos métodos para gestão de competências por categoria

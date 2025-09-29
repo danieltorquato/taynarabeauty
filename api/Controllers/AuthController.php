@@ -15,7 +15,7 @@ class AuthController {
         $db = new Database();
         $conn = $db->connect();
 
-        $stmt = $conn->prepare('SELECT id, nome, email, senha FROM usuarios WHERE email = :email LIMIT 1');
+        $stmt = $conn->prepare('SELECT id, nome, email, senha, role FROM usuarios WHERE email = :email LIMIT 1');
         $stmt->bindParam(':email', $email);
         $stmt->execute();
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -44,8 +44,9 @@ class AuthController {
             'token' => $token,
             'user' => [
                 'id' => (int)$user['id'],
-                'nome' => $user['nome'],
-                'email' => $user['email']
+                'name' => $user['nome'],
+                'email' => $user['email'],
+                'role' => $user['role']
             ]
         ]);
     }

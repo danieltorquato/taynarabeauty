@@ -1,13 +1,204 @@
 <ion-content fullscreen>
+  <!-- Header com informações do usuário -->
+  <div class="user-header" *ngIf="isAuthenticated">
+    <div class="user-info">
+      <span>Olá, {{ currentUser?.name }}!</span>
+      <span class="user-role">{{ currentUser?.role | titlecase }}</span>
+    </div>
+    <ion-button fill="clear" size="small" (click)="logout()">
+      Sair
+    </ion-button>
+  </div>
+
+  <!-- Switch Modo Admin/Profissional (somente para admin) -->
+  <div class="mode-switch" *ngIf="isAuthenticated && currentUser?.role === 'admin'">
+    <ion-card>
+      <ion-card-content>
+        <div class="switch-container">
+          <span class="switch-label">🎛️ Modo de Visualização:</span>
+          <div class="switch-options">
+            <ion-button
+              [fill]="viewMode === 'admin' ? 'solid' : 'outline'"
+              [color]="viewMode === 'admin' ? 'primary' : 'medium'"
+              size="small"
+              (click)="setViewMode('admin')">
+              👑 Admin
+            </ion-button>
+            <ion-button
+              [fill]="viewMode === 'profissional' ? 'solid' : 'outline'"
+              [color]="viewMode === 'profissional' ? 'success' : 'medium'"
+              size="small"
+              (click)="setViewMode('profissional')">
+              💼 Profissional
+            </ion-button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
   <!-- Banner -->
-  <div class="banner">
+  <div class="banner" *ngIf="isAuthenticated && currentUser?.role === 'cliente'">
     <img src="assets/img/logo.jpg" alt="Taynara Casagrande Beauty" class="logo">
     <h1>Taynara Casagrande Beauty</h1>
     <p>Agende seus procedimentos com facilidade e conheça nossos cursos.</p>
   </div>
 
-  <!-- Serviços -->
-  <ion-grid>
+  <!-- Menu de Login -->
+  <div class="login-section" *ngIf="!isAuthenticated">
+    <ion-card class="login-card">
+      <ion-card-content>
+        <h2>Faça login para acessar o sistema</h2>
+        <ion-button expand="block" routerLink="/login">
+          Entrar
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- Interface para Clientes -->
+  <ion-grid *ngIf="isAuthenticated && currentUser?.role === 'cliente'">
+    <ion-row>
+      <ion-col size="12" size-md="6">
+        <ion-card class="custom-card" routerLink="/agendamentos" [queryParams]="{ service: 'cilios' }">
+          <img src="assets/img/cilios.jpg" alt="Alongamento de Cílios" class="img-card"/>
+          <ion-card-header>
+            <ion-card-title>👁️ Alongamento de Cílios</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Realce seu olhar com técnicas modernas e personalizadas.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="custom-card" routerLink="/agendamentos" [queryParams]="{ service: 'labios' }">
+          <img src="assets/img/labios.jpg" alt="Design de Lábios" class="img-card"/>
+          <ion-card-header>
+            <ion-card-title>💄 Design de Lábios</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Procedimentos para realçar sua beleza natural com elegância.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12">
+        <ion-card class="custom-card" routerLink="/meus-agendamentos">
+          <ion-card-header>
+            <ion-card-title>📅 Meus Agendamentos</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Visualize e gerencie seus agendamentos.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Interface para Profissionais -->
+  <ion-grid *ngIf="isAuthenticated && (currentUser?.role === 'profissional' || (currentUser?.role === 'admin' && viewMode === 'profissional'))">
+    <ion-row>
+      <ion-col size="12">
+        <h2 class="section-title">Meu Dia de Trabalho</h2>
+      </ion-col>
+
+      <ion-col size="12" size-md="4">
+        <ion-card class="stats-card">
+          <ion-card-header>
+            <ion-card-title>📊 Hoje</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="stat-number">{{ agendamentosHoje }}</div>
+            <div class="stat-label">Agendamentos</div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="4">
+        <ion-card class="stats-card">
+          <ion-card-header>
+            <ion-card-title>⏰ Próximo</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="stat-number">{{ proximoAgendamento?.hora || '--:--' }}</div>
+            <div class="stat-label">{{ proximoAgendamento?.cliente || 'Nenhum' }}</div>
+            <div class="stat-detail">{{ proximoAgendamento?.procedimento || '' }}</div>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="4">
+        <ion-card class="stats-card" routerLink="/meus-agendamentos">
+          <ion-card-header>
+            <ion-card-title>📋 Gerenciar</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="stat-label">Ver todos os agendamentos</div>
+            <ion-button fill="clear" size="small">Acessar →</ion-button>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Interface para Admin/Recepção -->
+  <ion-grid *ngIf="isAuthenticated && ((currentUser?.role === 'admin' && viewMode === 'admin') || currentUser?.role === 'recepcao')">
+    <ion-row>
+      <ion-col size="12">
+        <h2 class="section-title">Painel Administrativo</h2>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="admin-card" routerLink="/dashboard-admin">
+          <ion-card-header>
+            <ion-card-title>📊 Dashboard</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Visualize estatísticas e gerencie agendamentos.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="admin-card" routerLink="/atendimento">
+          <ion-card-content>
+          <ion-card-header>
+            <ion-card-title>👥 Atendimentos </ion-card-title>
+          </ion-card-header>
+          </ion-card-content>
+          <ion-card-content>
+            Gerencie agendamentos e atendimentos.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6" *ngIf="canAccessGestaoProfissionais()">
+        <ion-card class="admin-card" routerLink="/gestao-profissionais">
+          <ion-card-header>
+            <ion-card-title>👥 Gestão de Profissionais</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Gerencie profissionais e suas competências.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" size-md="6">
+        <ion-card class="admin-card" routerLink="/agendamentos-admin">
+          <ion-card-header>
+            <ion-card-title>📅 Agendamentos</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            Visualize e gerencie todos os agendamentos.
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+
+  <!-- Serviços para usuários não autenticados -->
+  <ion-grid *ngIf="!isAuthenticated">
     <ion-row>
       <ion-col size="12" size-md="6">
         <ion-card class="custom-card" routerLink="/agendamentos" [queryParams]="{ service: 'cilios' }">
@@ -46,4 +237,6 @@
       </ion-col>
     </ion-row>
   </ion-grid>
+
+
 </ion-content>

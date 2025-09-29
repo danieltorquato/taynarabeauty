@@ -1,0 +1,185 @@
+ion-content {
+  --background: linear-gradient(135deg, #fee8f5 0%, #fdf2f8 100%);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding-bottom: 20px;
+}
+
+.procedimento-hero {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+  }
+}
+
+.info-card {
+  margin: -30px 15px 15px 15px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+  ion-card-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #9e4a7a;
+  }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8e8f0, #f0d6e8);
+  border-radius: 12px;
+
+  ion-icon {
+    font-size: 32px;
+  }
+
+  div {
+    display: flex;
+    flex-direction: column;
+
+    small {
+      color: #666;
+      font-size: 0.85rem;
+    }
+
+    strong {
+      color: #9e4a7a;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+}
+
+ion-card {
+  margin: 15px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+  ion-card-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #9e4a7a;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+
+    ion-icon {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.descricao {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #333;
+  text-align: justify;
+}
+
+.beneficios-list,
+.cuidados-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 10px 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-bottom: 1px solid #f0f0f0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+.cta-card {
+  background: linear-gradient(135deg, #9e4a7a 0%, #d4759e 100%);
+  color: white;
+  margin: 20px 15px;
+
+  .cta-content {
+    text-align: center;
+    padding: 20px 10px;
+  }
+
+  .cta-icon {
+    font-size: 64px;
+    margin-bottom: 15px;
+  }
+
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 15px 0;
+    color: white;
+  }
+
+  .cta-text {
+    font-size: 1.05rem;
+    line-height: 1.6;
+    margin: 15px 0;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .cta-highlight {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 20px 0;
+
+    strong {
+      font-size: 1.1rem;
+      color: #fff;
+    }
+  }
+
+  ion-button {
+    --background: white;
+    --color: #9e4a7a;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .procedimento-hero {
+    height: 250px;
+  }
+
+  .cta-card h2 {
+    font-size: 1.5rem;
+  }
+}

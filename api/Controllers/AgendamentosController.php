@@ -242,6 +242,166 @@ class AgendamentosController {
             // Não interromper o fluxo se falhar o bloqueio
         }
     }
+
+    public function aprovar($id) {
+        header('Content-Type: application/json');
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "confirmado" WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Agendamento aprovado com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::aprovar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao aprovar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    public function rejeitar($id) {
+        header('Content-Type: application/json');
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            // Ao rejeitar, também devemos liberar os horários bloqueados
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Atualizar status para rejeitado
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "rejeitado" WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Liberar horários
+            if ($agendamento) {
+                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
+                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
+                $stmt->bindParam(':data', $agendamento['data']);
+                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->execute();
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Agendamento rejeitado com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::rejeitar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao rejeitar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    public function marcarFalta($id) {
+        header('Content-Type: application/json');
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            // Ao marcar falta, também devemos liberar os horários bloqueados
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Atualizar status para faltou
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "faltou" WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Liberar horários
+            if ($agendamento) {
+                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
+                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
+                $stmt->bindParam(':data', $agendamento['data']);
+                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->execute();
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Falta registrada com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::marcarFalta: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao marcar falta: ' . $e->getMessage()]);
+        }
+    }
+
+    public function cancelar($id) {
+        header('Content-Type: application/json');
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            // Ao cancelar, também devemos liberar os horários bloqueados
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Atualizar status para cancelado
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "cancelado" WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+
+            // Liberar horários
+            if ($agendamento) {
+                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
+                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
+                $stmt->bindParam(':data', $agendamento['data']);
+                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->execute();
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Agendamento cancelado com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::cancelar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao cancelar agendamento: ' . $e->getMessage()]);
+        }
+    }
 }
 
 

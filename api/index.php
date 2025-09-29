@@ -2,7 +2,7 @@
 // Basic CORS
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
@@ -43,6 +43,30 @@ if ($route === '/auth/login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($route === '/agendamentos' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $controller = new AgendamentosController();
     $controller->create();
+    exit;
+}
+
+if (preg_match('/^\/agendamentos\/(\d+)\/aprovar$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new AgendamentosController();
+    $controller->aprovar($matches[1]);
+    exit;
+}
+
+if (preg_match('/^\/agendamentos\/(\d+)\/rejeitar$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new AgendamentosController();
+    $controller->rejeitar($matches[1]);
+    exit;
+}
+
+if (preg_match('/^\/agendamentos\/(\d+)\/marcar-falta$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new AgendamentosController();
+    $controller->marcarFalta($matches[1]);
+    exit;
+}
+
+if (preg_match('/^\/agendamentos\/(\d+)\/cancelar$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new AgendamentosController();
+    $controller->cancelar($matches[1]);
     exit;
 }
 
@@ -135,6 +159,19 @@ if (preg_match('/^\/profissionais\/(\d+)$/', $route, $matches) && $_SERVER['REQU
 if ($route === '/usuarios' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new UsuariosController();
     $controller->listar();
+    exit;
+}
+
+// Meus Agendamentos
+if ($route === '/meus-agendamentos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $controller = new MeusAgendamentosController();
+    $controller->listar();
+    exit;
+}
+
+if (preg_match('/^\/meus-agendamentos\/(\d+)\/cancelar$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new MeusAgendamentosController();
+    $controller->cancelar($matches[1]);
     exit;
 }
 

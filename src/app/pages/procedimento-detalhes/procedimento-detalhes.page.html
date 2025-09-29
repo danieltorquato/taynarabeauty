@@ -1,0 +1,117 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/meus-agendamentos"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ procedimento?.nome }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="container" *ngIf="procedimento">
+    <!-- Imagem destaque -->
+    <div class="procedimento-hero">
+      <img [src]="procedimento.imagem" [alt]="procedimento.nome" />
+      <div class="hero-overlay">
+        <ion-chip [color]="procedimento.categoria === 'Cílios' ? 'primary' : 'secondary'">
+          {{ procedimento.categoria }}
+        </ion-chip>
+      </div>
+    </div>
+
+    <!-- Informações principais -->
+    <ion-card class="info-card">
+      <ion-card-header>
+        <ion-card-title>{{ procedimento.nome }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <div class="info-grid">
+          <div class="info-item">
+            <ion-icon name="time-outline" color="primary"></ion-icon>
+            <div>
+              <small>Duração</small>
+              <strong>{{ procedimento.duracao }}</strong>
+            </div>
+          </div>
+          <div class="info-item">
+            <ion-icon name="cash-outline" color="success"></ion-icon>
+            <div>
+              <small>Investimento</small>
+              <strong>{{ procedimento.preco }}</strong>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Descrição -->
+    <ion-card>
+      <ion-card-header>
+        <h3><ion-icon name="information-circle-outline"></ion-icon> Sobre o Procedimento</h3>
+      </ion-card-header>
+      <ion-card-content>
+        <p class="descricao">{{ procedimento.descricao }}</p>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Benefícios -->
+    <ion-card>
+      <ion-card-header>
+        <h3><ion-icon name="sparkles-outline"></ion-icon> Benefícios</h3>
+      </ion-card-header>
+      <ion-card-content>
+        <ul class="beneficios-list">
+          <li *ngFor="let beneficio of procedimento.beneficios">
+            ✨ {{ beneficio }}
+          </li>
+        </ul>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Cuidados -->
+    <ion-card>
+      <ion-card-header>
+        <h3>💝 Cuidados Pós-Procedimento</h3>
+      </ion-card-header>
+      <ion-card-content>
+        <ul class="cuidados-list">
+          <li *ngFor="let cuidado of procedimento.cuidados">
+            💡 {{ cuidado }}
+          </li>
+        </ul>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Chamada para Cursos -->
+    <ion-card class="cta-card">
+      <ion-card-content>
+        <div class="cta-content">
+          <ion-icon name="school-outline" color="primary" class="cta-icon"></ion-icon>
+          <h2>Se Apaixonou pelo Resultado?</h2>
+          <p class="cta-text">
+            Imagine você dominando essa técnica e transformando a autoestima de dezenas de clientes!
+            Nossos cursos profissionalizantes te ensinam todos os segredos para realizar esses procedimentos
+            com excelência e segurança.
+          </p>
+          <p class="cta-highlight">
+            <strong>💫 Conquiste sua independência financeira fazendo o que ama!</strong>
+          </p>
+          <ion-button expand="block" size="large" (click)="irParaCursos()">
+            <ion-icon name="school-outline" slot="start"></ion-icon>
+            Conhecer Nossos Cursos
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <div class="container" *ngIf="!procedimento">
+    <ion-card>
+      <ion-card-content>
+        <p style="text-align: center; padding: 20px;">
+          Procedimento não encontrado.
+        </p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

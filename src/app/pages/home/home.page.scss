@@ -12,7 +12,7 @@ ion-content {
 .banner {
   text-align: center;
   padding: 25px;
-  margin-bottom: -5%;   
+  margin-bottom: -5%;
 }
 
 .logo {
@@ -75,4 +75,164 @@ ion-card-title {
 ion-card-content {
   font-size: 1.05rem;
   color: #333;
+}
+
+// Header do usuário
+.user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #f28cb4, #e8a0c7);
+  margin-bottom: 10px;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  color: white;
+
+  span:first-child {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .user-role {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: capitalize;
+  }
+}
+
+// Switch de modo Admin/Profissional
+.mode-switch {
+  padding: 10px 15px 0 15px;
+
+  ion-card {
+    margin: 0;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #fff5f9, #ffe8f3);
+    border: 2px solid #f28cb4;
+  }
+
+  ion-card-content {
+    padding: 12px;
+  }
+
+  .switch-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  .switch-label {
+    font-weight: 600;
+    color: #9e4a7a;
+    font-size: 1rem;
+  }
+
+  .switch-options {
+    display: flex;
+    gap: 10px;
+  }
+}
+
+// Seção de login
+.login-section {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.login-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+
+  h2 {
+    color: #9e4a7a;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+}
+
+// Menu administrativo
+.section-title {
+  color: #9e4a7a;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 20px 0 10px 0;
+  text-align: center;
+}
+
+.admin-card {
+  background: linear-gradient(135deg, #f8e8f0, #f0d6e8);
+  border: 2px solid #e8a0c7;
+  border-radius: 15px;
+  margin: 10px 0;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(158, 74, 122, 0.2);
+  }
+
+  ion-card-title {
+    color: #9e4a7a;
+    font-size: 1.2rem;
+  }
+
+  ion-card-content {
+    color: #666;
+  }
+}
+
+// Cards de estatísticas para profissionais
+.stats-card {
+  background: linear-gradient(135deg, #f8e8f0, #f0d6e8);
+  border: 2px solid #e8a0c7;
+  border-radius: 15px;
+  margin: 10px 0;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(158, 74, 122, 0.2);
+  }
+
+  ion-card-title {
+    color: #9e4a7a;
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #9e4a7a;
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  .stat-label {
+    font-size: 1rem;
+    color: #666;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .stat-detail {
+    font-size: 0.9rem;
+    color: #888;
+    text-align: center;
+    margin-top: 5px;
+  }
 }

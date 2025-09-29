@@ -44,7 +44,7 @@
 
           <ion-item>
             <ion-label position="stacked">Procedimento</ion-label>
-            <ion-select [(ngModel)]="selectedProcedimento" placeholder="Selecionar procedimento">
+            <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="onProcedimentoChange()" placeholder="Selecionar procedimento">
               <ion-select-option value="0">Todos os procedimentos</ion-select-option>
               <ion-select-option *ngFor="let proc of procedimentosFiltrados" [value]="proc.id">
                 {{ proc.nome }}
@@ -97,6 +97,13 @@
       <ion-card-header>
         <ion-card-title>Horários - {{ selectedDate }}</ion-card-title>
         <p>Clique nos horários para liberar/bloquear</p>
+        <div *ngIf="selectedProfissional !== '0' || selectedProcedimento !== '0'" class="professional-filter-indicator">
+          <small>
+            <span *ngIf="selectedProfissional !== '0'">👤 <strong>{{ getProfissionalNome() }}</strong></span>
+            <span *ngIf="selectedProfissional !== '0' && selectedProcedimento !== '0'"> • </span>
+            <span *ngIf="selectedProcedimento !== '0'">💄 <strong>{{ getProcedimentoCategoria() }}</strong></span>
+          </small>
+        </div>
       </ion-card-header>
       <ion-card-content>
         <div class="time-grid">
@@ -106,6 +113,7 @@
                [class.blocked]="slot.status === 'bloqueado'"
                [class.booked]="slot.status === 'ocupado'"
                [class.has-changes]="slot.hasChanges"
+               [class.almoco]="isHorarioAlmoco(slot.time)"
                (click)="toggleTimeSlot(slot)">
             <div class="time">{{ slot.time }}</div>
             <div class="status">{{ getStatusLabel(slot.status) }}</div>
@@ -126,6 +134,10 @@
           <div class="legend-item">
             <span class="legend-dot booked"></span>
             <span>Ocupado</span>
+          </div>
+          <div class="legend-item" *ngIf="selectedProfissional !== '0'">
+            <span class="legend-dot almoco"></span>
+            <span>Almoço 🍽️</span>
           </div>
         </div>
       </ion-card-content>

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../Config/Database.php';
+
 class HorariosController {
     public function listar() {
         header('Content-Type: application/json');
@@ -48,6 +50,11 @@ class HorariosController {
 
                 $stmt->execute();
                 $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Filtrar horários de almoço se profissional foi especificado
+                if ($profissionalId && $profissionalId > 0) {
+                    $horarios = $this->filtrarHorariosAlmoco($conn, $horarios, $profissionalId);
+                }
 
                 // Se não há horários específicos para esta data, retornar array vazio
                 // Não mais usar horários padrão automaticamente
@@ -309,6 +316,15 @@ class HorariosController {
                     $hora .= ':00';
                 }
 
+                // Se está tentando liberar um horário e há profissional selecionado,
+                // verificar se não está no horário de almoço
+                if ($status === 'livre' && $profissionalId) {
+                    if ($this->isHorarioAlmoco($conn, $hora, $profissionalId)) {
+                        // Pular este horário, pois está no período de almoço
+                        continue;
+                    }
+                }
+
                 if ($status === 'livre') {
                     // Insert or update to 'livre' - incluir profissional_id se fornecido
                     if ($profissionalId) {
@@ -387,6 +403,78 @@ class HorariosController {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ";
             $conn->exec($createTable);
+        }
+    }
+
+    private function filtrarHorariosAlmoco($conn, $horarios, $profissionalId) {
+        try {
+            // Buscar horário de almoço do profissional
+            $stmt = $conn->prepare("SHOW TABLES LIKE 'profissionais'");
+            $stmt->execute();
+            if ($stmt->rowCount() === 0) {
+                return $horarios; // Se tabela não existe, retornar sem filtrar
+            }
+
+            $stmt = $conn->prepare('SELECT almoco_inicio, almoco_fim FROM profissionais WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $profissionalId);
+            $stmt->execute();
+            $profissional = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$profissional || !$profissional['almoco_inicio'] || !$profissional['almoco_fim']) {
+                return $horarios; // Se não tem horário de almoço definido, retornar sem filtrar
+            }
+
+            $almocoInicio = $profissional['almoco_inicio'];
+            $almocoFim = $profissional['almoco_fim'];
+
+            // Filtrar horários que estão fora do período de almoço
+            $horariosFiltrados = array_filter($horarios, function($horario) use ($almocoInicio, $almocoFim) {
+                $hora = $horario['hora'];
+
+                // Converter para minutos para facilitar comparação
+                $horaMinutos = $this->converterHorarioParaMinutos($hora);
+                $almocoInicioMinutos = $this->converterHorarioParaMinutos($almocoInicio);
+                $almocoFimMinutos = $this->converterHorarioParaMinutos($almocoFim);
+
+                // Retornar true apenas se o horário NÃO estiver no período de almoço
+                return $horaMinutos < $almocoInicioMinutos || $horaMinutos >= $almocoFimMinutos;
+            });
+
+            return array_values($horariosFiltrados); // Reindexar array
+        } catch (Throwable $e) {
+            error_log('Erro ao filtrar horários de almoço: ' . $e->getMessage());
+            return $horarios; // Em caso de erro, retornar horários sem filtrar
+        }
+    }
+
+    private function converterHorarioParaMinutos($horario) {
+        $partes = explode(':', $horario);
+        $horas = (int)$partes[0];
+        $minutos = (int)$partes[1];
+        return $horas * 60 + $minutos;
+    }
+
+    private function isHorarioAlmoco($conn, $hora, $profissionalId) {
+        try {
+            // Buscar horário de almoço do profissional
+            $stmt = $conn->prepare('SELECT almoco_inicio, almoco_fim FROM profissionais WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $profissionalId);
+            $stmt->execute();
+            $profissional = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$profissional || !$profissional['almoco_inicio'] || !$profissional['almoco_fim']) {
+                return false; // Não tem horário de almoço configurado
+            }
+
+            $horaMinutos = $this->converterHorarioParaMinutos($hora);
+            $almocoInicioMinutos = $this->converterHorarioParaMinutos($profissional['almoco_inicio']);
+            $almocoFimMinutos = $this->converterHorarioParaMinutos($profissional['almoco_fim']);
+
+            // Retorna true se o horário está dentro do período de almoço
+            return $horaMinutos >= $almocoInicioMinutos && $horaMinutos < $almocoFimMinutos;
+        } catch (Throwable $e) {
+            error_log('Erro ao verificar horário de almoço: ' . $e->getMessage());
+            return false;
         }
     }
 }

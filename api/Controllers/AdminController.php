@@ -97,14 +97,16 @@ class AdminController {
             if ($stmt->rowCount() > 0) {
                 $stmt = $conn->prepare('
                     SELECT
-                      a.id, a.data, a.hora, a.status, a.observacoes, a.criado_em,
+                      a.id, a.data, a.hora, a.status, a.observacoes, a.criado_em, a.profissional_id,
                       COALESCE(u.nome, "Cliente") as cliente_nome,
                       COALESCE(u.email, "") as cliente_email,
                       COALESCE(p.nome, "Procedimento") as procedimento_nome,
+                      COALESCE(prof.nome, "Profissional Não Atribuído") as profissional_nome,
                       a.opcao_cilios, a.cor_cilios, a.opcao_labios
                     FROM agendamentos a
                     LEFT JOIN usuarios u ON a.usuario_id = u.id
                     LEFT JOIN procedimentos p ON a.procedimento_id = p.id
+                    LEFT JOIN profissionais prof ON a.profissional_id = prof.id
                     WHERE a.data = :data
                     ORDER BY a.hora
                 ');
