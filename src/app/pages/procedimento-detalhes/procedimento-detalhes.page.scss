@@ -63,7 +63,7 @@ ion-content {
     flex-direction: column;
 
     small {
-      color: #666;
+      color: #333;
       font-size: 0.85rem;
     }
 
@@ -122,7 +122,7 @@ ion-card {
 
 .cta-card {
   background: linear-gradient(135deg, #9e4a7a 0%, #d4759e 100%);
-  color: white;
+  color: #333;
   margin: 20px 15px;
 
   .cta-content {
@@ -139,7 +139,7 @@ ion-card {
     font-size: 1.8rem;
     font-weight: 700;
     margin: 15px 0;
-    color: white;
+    color: #333;
   }
 
   .cta-text {

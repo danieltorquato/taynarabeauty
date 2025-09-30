@@ -2,31 +2,35 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
-import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, closeCircleOutline, informationCircleOutline, schoolOutline } from 'ionicons/icons';
+import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, closeCircleOutline, informationCircleOutline, schoolOutline, closeOutline, alertCircleOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-meus-agendamentos',
   templateUrl: './meus-agendamentos.page.html',
   styleUrls: ['./meus-agendamentos.page.scss'],
   standalone: true,
-  imports: [IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, CommonModule, FormsModule]
+  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, IonItem, CommonModule, FormsModule]
 })
 export class MeusAgendamentosPage implements OnInit {
   agendamentos: any[] = [];
+  agendamentosFiltrados: any[] = [];
   loading = false;
   selectedAgendamento: any = null;
   showDetails = false;
+  selectedSegment = 'todos';
+  showHistoryModal = false;
+  historicoAgendamentos: any[] = [];
 
   constructor(
-    private authService: AuthService,
+    public authService: AuthService,
     private api: ApiService,
     private router: Router
   ) {
-    addIcons({calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, closeCircleOutline, informationCircleOutline, schoolOutline});
+    addIcons({timeOutline,calendarOutline,personOutline,informationCircleOutline,closeCircleOutline,closeOutline,alertCircleOutline,checkmarkCircleOutline,schoolOutline});
   }
 
   ngOnInit() {
@@ -39,7 +43,27 @@ export class MeusAgendamentosPage implements OnInit {
       next: (res) => {
         this.loading = false;
         if (res.success) {
-          this.agendamentos = res.agendamentos || [];
+          let agendamentos = res.agendamentos || [];
+
+          // Filtrar agendamentos baseado no role do usuário
+          const currentUser = this.authService.currentUser;
+          if (currentUser) {
+            if (currentUser.role === 'admin' || currentUser.role === 'recepcao') {
+              // Admin e recepção veem todos os agendamentos
+              this.agendamentos = agendamentos;
+            } else if (currentUser.role === 'profissional') {
+              // Profissional vê apenas agendamentos onde ele é responsável
+              this.agendamentos = agendamentos.filter((ag: any) =>
+                ag.profissional_id === currentUser.id || ag.profissional_id == currentUser.id
+              );
+            } else {
+              // Cliente vê apenas seus próprios agendamentos
+              this.agendamentos = agendamentos;
+            }
+          } else {
+            this.agendamentos = agendamentos;
+          }
+          this.filtrarAgendamentos();
         }
       },
       error: (err) => {
@@ -49,6 +73,32 @@ export class MeusAgendamentosPage implements OnInit {
         this.agendamentos = [];
       }
     });
+  }
+
+  filtrarAgendamentos() {
+    if (this.selectedSegment === 'todos') {
+      this.agendamentosFiltrados = this.agendamentos;
+    } else {
+      this.agendamentosFiltrados = this.agendamentos.filter((ag: any) =>
+        ag.status === this.selectedSegment
+      );
+    }
+  }
+
+  onSegmentChange() {
+    this.filtrarAgendamentos();
+  }
+
+  abrirHistorico() {
+    this.historicoAgendamentos = [...this.agendamentos].sort((a, b) => {
+      // Ordenar por data (mais recente primeiro)
+      return new Date(b.data + ' ' + b.hora).getTime() - new Date(a.data + ' ' + a.hora).getTime();
+    });
+    this.showHistoryModal = true;
+  }
+
+  fecharHistorico() {
+    this.showHistoryModal = false;
   }
 
   verDetalhes(agendamento: any) {
@@ -100,6 +150,8 @@ export class MeusAgendamentosPage implements OnInit {
       case 'confirmado': return 'success';
       case 'pendente': return 'warning';
       case 'cancelado': return 'danger';
+      case 'rejeitado': return 'danger';
+      case 'faltou': return 'danger';
       default: return 'medium';
     }
   }
@@ -109,6 +161,8 @@ export class MeusAgendamentosPage implements OnInit {
       case 'confirmado': return 'Confirmado';
       case 'pendente': return 'Pendente';
       case 'cancelado': return 'Cancelado';
+      case 'rejeitado': return 'Rejeitado';
+      case 'faltou': return 'Faltou';
       default: return status;
     }
   }

@@ -79,6 +79,10 @@ class AdminController {
         header('Content-Type: application/json');
         $data = $_GET['data'] ?? date('Y-m-d');
 
+        // Log para debug
+        error_log("AdminController::listarAgendamentos - Data recebida: " . $data);
+        error_log("AdminController::listarAgendamentos - Data atual do servidor: " . date('Y-m-d'));
+
         $db = new Database();
         $conn = $db->connect();
 
@@ -95,7 +99,7 @@ class AdminController {
             $stmt = $conn->prepare("SHOW TABLES LIKE 'agendamentos'");
             $stmt->execute();
             if ($stmt->rowCount() > 0) {
-                $stmt = $conn->prepare('
+                $query = '
                     SELECT
                       a.id, a.data, a.hora, a.status, a.observacoes, a.criado_em, a.profissional_id,
                       COALESCE(u.nome, "Cliente") as cliente_nome,
@@ -107,12 +111,20 @@ class AdminController {
                     LEFT JOIN usuarios u ON a.usuario_id = u.id
                     LEFT JOIN procedimentos p ON a.procedimento_id = p.id
                     LEFT JOIN profissionais prof ON a.profissional_id = prof.id
-                    WHERE a.data = :data
+                    WHERE DATE(a.data) = DATE(:data)
                     ORDER BY a.hora
-                ');
+                ';
+
+                error_log("AdminController::listarAgendamentos - Query: " . $query);
+                error_log("AdminController::listarAgendamentos - Parâmetro data: " . $data);
+
+                $stmt = $conn->prepare($query);
                 $stmt->bindParam(':data', $data);
                 $stmt->execute();
                 $agendamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Log para debug (apenas em desenvolvimento)
+                error_log("AdminController::listarAgendamentos - Data: $data, Agendamentos encontrados: " . count($agendamentos));
             }
 
             echo json_encode([

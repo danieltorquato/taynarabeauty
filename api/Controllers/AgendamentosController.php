@@ -22,17 +22,39 @@ class AgendamentosController {
             return;
         }
 
-        // Se profissional_id = 0, significa "sem preferência" - usar o primeiro disponível
-        if ($profissional_id === 0) {
-            $profissional_id = 1; // Default para primeiro profissional
-        }
-
+        // Verificar se já existe agendamento ativo para o usuário
+        $usuario_id = 1; // TODO: get from JWT token
         $db = new Database();
         $conn = $db->connect();
         if ($conn === null) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
             return;
+        }
+
+        try {
+            // Verificar se existe agendamento pendente ou confirmado para hoje ou futuro
+            $stmt = $conn->prepare('SELECT id, status, data FROM agendamentos WHERE usuario_id = :usuario_id AND status IN ("pendente", "confirmado") AND data >= CURDATE() LIMIT 1');
+            $stmt->bindParam(':usuario_id', $usuario_id);
+            $stmt->execute();
+            $agendamentoExistente = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($agendamentoExistente) {
+                http_response_code(422);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Você já possui um agendamento ' . $agendamentoExistente['status'] . ' para ' . date('d/m/Y', strtotime($agendamentoExistente['data'])) . '. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.'
+                ]);
+                return;
+            }
+        } catch (Throwable $e) {
+            error_log('Erro ao verificar duplicidade: ' . $e->getMessage());
+            // Continuar com o agendamento se houver erro na verificação
+        }
+
+        // Se profissional_id = 0, significa "sem preferência" - usar o primeiro disponível
+        if ($profissional_id === 0) {
+            $profissional_id = 1; // Default para primeiro profissional
         }
 
         try {
@@ -86,15 +108,23 @@ class AgendamentosController {
                         data DATE NOT NULL,
                         hora TIME NOT NULL,
                         observacoes TEXT NULL,
-                        status ENUM('pendente','confirmado','cancelado') NOT NULL DEFAULT 'pendente',
+                        status ENUM('pendente','confirmado','cancelado','rejeitado','faltou') NOT NULL DEFAULT 'pendente',
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 ";
                 $conn->exec($createTable);
+            } else {
+                // Update existing table to include new status values
+                try {
+                    $stmt = $conn->prepare("ALTER TABLE agendamentos MODIFY COLUMN status ENUM('pendente','confirmado','cancelado','rejeitado','faltou') NOT NULL DEFAULT 'pendente'");
+                    $stmt->execute();
+                } catch (Throwable $e) {
+                    // Ignore if already updated or if there's an error
+                    error_log('Erro ao atualizar coluna status: ' . $e->getMessage());
+                }
             }
 
             // Ensure user ID 1 exists for the foreign key constraint
-            $usuario_id = 1; // TODO: get from JWT token
 
             // Double-check user exists before inserting agendamento
             $stmt = $conn->prepare('SELECT id FROM usuarios WHERE id = :user_id LIMIT 1');
@@ -157,6 +187,9 @@ class AgendamentosController {
 
             // Email handling (simplified)
             $emailSent = false;
+
+            // Enviar notificação para admin/profissionais sobre novo agendamento
+            $this->enviarNotificacaoNovoAgendamento($conn, $id, $procedimento_id, $data, $hora);
 
             echo json_encode([
                 'success' => true,
@@ -273,6 +306,8 @@ class AgendamentosController {
 
     public function rejeitar($id) {
         header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $motivoRejeicao = trim($input['motivo_rejeicao'] ?? '');
 
         $db = new Database();
         $conn = $db->connect();
@@ -284,15 +319,24 @@ class AgendamentosController {
         }
 
         try {
+            // Verificar se a coluna motivo_rejeicao existe, se não, adicionar
+            $stmt = $conn->prepare("SHOW COLUMNS FROM agendamentos LIKE 'motivo_rejeicao'");
+            $stmt->execute();
+            if ($stmt->rowCount() === 0) {
+                $stmt = $conn->prepare("ALTER TABLE agendamentos ADD COLUMN motivo_rejeicao TEXT NULL AFTER observacoes");
+                $stmt->execute();
+            }
+
             // Ao rejeitar, também devemos liberar os horários bloqueados
             $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $id);
             $stmt->execute();
             $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Atualizar status para rejeitado
-            $stmt = $conn->prepare('UPDATE agendamentos SET status = "rejeitado" WHERE id = :id');
+            // Atualizar status para rejeitado com motivo
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "rejeitado", motivo_rejeicao = :motivo WHERE id = :id');
             $stmt->bindParam(':id', $id);
+            $stmt->bindParam(':motivo', $motivoRejeicao);
             $stmt->execute();
 
             // Liberar horários
@@ -400,6 +444,116 @@ class AgendamentosController {
             error_log('Erro AgendamentosController::cancelar: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao cancelar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    private function enviarNotificacaoNovoAgendamento($conn, $agendamentoId, $procedimentoId, $data, $hora) {
+        try {
+            // Buscar nome do procedimento
+            $stmt = $conn->prepare('SELECT nome FROM procedimentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $procedimentoId);
+            $stmt->execute();
+            $procedimento = $stmt->fetch(PDO::FETCH_ASSOC);
+            $procedimentoNome = $procedimento ? $procedimento['nome'] : 'Procedimento';
+
+            // Buscar usuários admin e recepção para notificar
+            $stmt = $conn->prepare('SELECT id, role FROM usuarios WHERE role IN ("admin", "recepcao")');
+            $stmt->execute();
+            $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($usuarios as $usuario) {
+                $notificacao = [
+                    'usuario_id' => $usuario['id'],
+                    'titulo' => 'Novo Agendamento',
+                    'mensagem' => "Novo agendamento de {$procedimentoNome} para {$data} às {$hora}",
+                    'tipo' => 'info',
+                    'action_url' => $usuario['role'] === 'admin' ? '/agendamentos-admin' : '/meus-agendamentos',
+                    'action_text' => 'Ver Agendamentos',
+                    'criado_em' => date('Y-m-d H:i:s')
+                ];
+
+                // Inserir notificação (assumindo que existe uma tabela notificacoes)
+                $stmt = $conn->prepare('
+                    INSERT INTO notificacoes (usuario_id, titulo, mensagem, tipo, action_url, action_text, criado_em)
+                    VALUES (:usuario_id, :titulo, :mensagem, :tipo, :action_url, :action_text, :criado_em)
+                ');
+                $stmt->bindParam(':usuario_id', $notificacao['usuario_id']);
+                $stmt->bindParam(':titulo', $notificacao['titulo']);
+                $stmt->bindParam(':mensagem', $notificacao['mensagem']);
+                $stmt->bindParam(':tipo', $notificacao['tipo']);
+                $stmt->bindParam(':action_url', $notificacao['action_url']);
+                $stmt->bindParam(':action_text', $notificacao['action_text']);
+                $stmt->bindParam(':criado_em', $notificacao['criado_em']);
+                $stmt->execute();
+            }
+        } catch (Throwable $e) {
+            error_log('Erro ao enviar notificação de novo agendamento: ' . $e->getMessage());
+            // Não interromper o fluxo se falhar o envio da notificação
+        }
+    }
+
+    public function desmarcar($id) {
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $justificativa = trim($input['justificativa'] ?? '');
+
+        if (empty($justificativa)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Justificativa é obrigatória']);
+            return;
+        }
+
+        $db = new Database();
+        $conn = $db->connect();
+
+        if ($conn === null) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Falha na conexão com o banco de dados']);
+            return;
+        }
+
+        try {
+            // Verificar se a coluna justificativa_desmarcacao existe, se não, adicionar
+            $stmt = $conn->prepare("SHOW COLUMNS FROM agendamentos LIKE 'justificativa_desmarcacao'");
+            $stmt->execute();
+            if ($stmt->rowCount() === 0) {
+                $stmt = $conn->prepare("ALTER TABLE agendamentos ADD COLUMN justificativa_desmarcacao TEXT NULL AFTER motivo_rejeicao");
+                $stmt->execute();
+            }
+
+            // Buscar dados do agendamento para liberar horários
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$agendamento) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Agendamento não encontrado']);
+                return;
+            }
+
+            // Atualizar status para cancelado com justificativa
+            $stmt = $conn->prepare('UPDATE agendamentos SET status = "cancelado", justificativa_desmarcacao = :justificativa WHERE id = :id');
+            $stmt->bindParam(':id', $id);
+            $stmt->bindParam(':justificativa', $justificativa);
+            $stmt->execute();
+
+            // Liberar horários
+            $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
+            $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
+            $stmt->bindParam(':data', $agendamento['data']);
+            $stmt->bindParam(':hora', $agendamento['hora']);
+            $stmt->execute();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Agendamento desmarcado com sucesso'
+            ]);
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::desmarcar: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao desmarcar agendamento: ' . $e->getMessage()]);
         }
     }
 }

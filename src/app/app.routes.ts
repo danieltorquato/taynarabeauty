@@ -18,11 +18,13 @@ export const routes: Routes = [
   },
   {
     path: 'servicos',
-    loadComponent: () => import('./pages/servicos/servicos.page').then( m => m.ServicosPage)
+    loadComponent: () => import('./pages/servicos/servicos.page').then( m => m.ServicosPage),
+    canActivate: [AuthGuard]
   },
   {
     path: 'cursos',
-    loadComponent: () => import('./pages/cursos/cursos.page').then( m => m.CursosPage)
+    loadComponent: () => import('./pages/cursos/cursos.page').then( m => m.CursosPage),
+    canActivate: [AuthGuard]
   },
   {
     path: 'agendamentos',
@@ -66,6 +68,7 @@ export const routes: Routes = [
   },
   {
     path: 'procedimento-detalhes/:id',
-    loadComponent: () => import('./pages/procedimento-detalhes/procedimento-detalhes.page').then( m => m.ProcedimentoDetalhesPage)
+    loadComponent: () => import('./pages/procedimento-detalhes/procedimento-detalhes.page').then( m => m.ProcedimentoDetalhesPage),
+    canActivate: [AuthGuard]
   },
 ];

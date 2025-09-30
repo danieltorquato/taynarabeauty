@@ -6,6 +6,7 @@
 
       <div class="summary">
         <div><strong>Serviço:</strong> {{ servico }}</div>
+        <div><strong>Profissional:</strong> {{ profissionalNome || 'Será definido automaticamente' }}</div>
         <div><strong>Data:</strong> {{ data }}</div>
         <div><strong>Hora:</strong> {{ hora }}</div>
         <div *ngIf="telefone"><strong>Telefone:</strong> {{ telefone }}</div>

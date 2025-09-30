@@ -9,7 +9,21 @@
 
 <ion-content [fullscreen]="true">
   <div class="wrapper">
-    <ion-list lines="none" class="card">
+    <!-- Aviso de agendamento ativo -->
+    <div *ngIf="hasActiveAppointment" class="active-appointment-warning">
+      <ion-icon name="information-circle-outline"></ion-icon>
+      <div class="warning-content">
+        <h3>Você já possui um agendamento ativo</h3>
+        <p>Você não pode fazer um novo agendamento enquanto tiver um agendamento pendente ou confirmado.</p>
+        <ion-button fill="outline" size="small" (click)="navigateToMeusAgendamentos()">
+          Ver meus agendamentos
+        </ion-button>
+      </div>
+    </div>
+
+
+
+    <ion-list lines="none" class="card" [class.disabled]="hasActiveAppointment">
 
       <!-- Procedimento -->
       <ion-item>

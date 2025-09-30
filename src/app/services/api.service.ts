@@ -182,10 +182,11 @@ export class ApiService {
     );
   }
 
-  rejeitarAgendamento(id: number): Observable<any> {
+  rejeitarAgendamento(id: number, motivoRejeicao?: string): Observable<any> {
     const url = `${this.baseUrl}/agendamentos/${id}/rejeitar`;
+    const body = motivoRejeicao ? { motivo_rejeicao: motivoRejeicao } : {};
     return from(this.getAuthHeaders()).pipe(
-      switchMap(headers => this.http.post(url, {}, { headers }))
+      switchMap(headers => this.http.post(url, body, { headers }))
     );
   }
 
@@ -200,6 +201,13 @@ export class ApiService {
     const url = `${this.baseUrl}/agendamentos/${id}/cancelar`;
     return from(this.getAuthHeaders()).pipe(
       switchMap(headers => this.http.post(url, {}, { headers }))
+    );
+  }
+
+  desmarcarAgendamento(id: number, justificativa: string): Observable<any> {
+    const url = `${this.baseUrl}/agendamentos/${id}/desmarcar`;
+    return from(this.getAuthHeaders()).pipe(
+      switchMap(headers => this.http.post(url, { justificativa }, { headers }))
     );
   }
 }

@@ -18,8 +18,8 @@
             <ion-datetime
               [(ngModel)]="selectedDate"
               (ionChange)="onDateChange()"
+              (ionInput)="onDateChangeEvent($event)"
               presentation="date"
-              [max]="maxDate"
               [value]="selectedDate">
             </ion-datetime>
           </div>
@@ -46,6 +46,32 @@
             <ion-icon name="refresh-outline" slot="start"></ion-icon>
             Atualizar
           </ion-button>
+
+          <ion-button
+            fill="solid"
+            color="primary"
+            (click)="abrirFormularioAgendamento()">
+            <ion-icon name="add-outline" slot="start"></ion-icon>
+            Novo Agendamento
+          </ion-button>
+        </div>
+
+        <!-- Segmentos para filtrar por status -->
+        <div class="segments-container">
+        <ion-segment [(ngModel)]="selectedSegment" (ionChange)="onSegmentChange()">
+          <ion-segment-button value="todos">
+            <ion-label>📋 Todos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="pendente">
+            <ion-label>⏳ Pendentes</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="confirmado">
+            <ion-label>✅ Aprovados</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="rejeitado">
+            <ion-label>❌ Rejeitados</ion-label>
+          </ion-segment-button>
+        </ion-segment>
         </div>
       </ion-card-content>
     </ion-card>
@@ -56,14 +82,14 @@
       <p>Carregando agendamentos...</p>
     </div>
 
-    <div *ngIf="!loading && agendamentos.length === 0" class="empty-state">
+    <div *ngIf="!loading && agendamentosFiltrados.length === 0" class="empty-state">
       <ion-icon name="calendar-outline"></ion-icon>
       <h2>Nenhum agendamento encontrado</h2>
       <p>Não há agendamentos para a data e profissional selecionados.</p>
     </div>
 
-    <div *ngIf="!loading && agendamentos.length > 0" class="agendamentos-list">
-      <ion-card *ngFor="let agendamento of agendamentos" class="agendamento-card">
+    <div *ngIf="!loading && agendamentosFiltrados.length > 0" class="agendamentos-list">
+      <ion-card *ngFor="let agendamento of agendamentosFiltrados" class="agendamento-card">
         <ion-card-header>
           <div class="agendamento-header">
             <div class="agendamento-info">
@@ -132,6 +158,16 @@
               (click)="marcarFalta(agendamento)">
               <ion-icon name="close-circle-outline" slot="start"></ion-icon>
               Marcar Falta
+            </ion-button>
+
+            <ion-button
+              *ngIf="agendamento.status === 'confirmado'"
+              fill="clear"
+              color="danger"
+              size="small"
+              (click)="abrirModalDesmarcar(agendamento)">
+              <ion-icon name="remove-circle-outline" slot="start"></ion-icon>
+              Desmarcar
             </ion-button>
 
             <ion-button
@@ -213,5 +249,146 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Modal de Novo Agendamento -->
+  <div class="modal-overlay" *ngIf="showAgendamentoForm" (click)="fecharFormularioAgendamento()">
+    <div class="modal-content agendamento-form" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Novo Agendamento</h2>
+        <ion-button fill="clear" (click)="fecharFormularioAgendamento()">
+          <ion-icon name="close-circle-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <ion-label position="stacked">Cliente *</ion-label>
+          <input
+            type="text"
+            [(ngModel)]="clienteNome"
+            placeholder="Nome do cliente"
+            class="form-input">
+        </div>
+
+        <div class="form-group">
+          <ion-label position="stacked">Telefone</ion-label>
+          <input
+            type="tel"
+            [(ngModel)]="clienteTelefone"
+            placeholder="(11) 99999-9999"
+            class="form-input">
+        </div>
+
+        <div class="form-group">
+          <ion-label position="stacked">Procedimento *</ion-label>
+          <ion-select
+            [(ngModel)]="selectedProcedimento"
+            (ionChange)="onProcedimentoChange()"
+            placeholder="Selecionar procedimento">
+            <ion-select-option *ngFor="let proc of procedimentos" [value]="proc.id">
+              {{ proc.nome }}
+            </ion-select-option>
+          </ion-select>
+        </div>
+
+        <div class="form-group">
+          <ion-label position="stacked">Data *</ion-label>
+          <ion-datetime
+            [(ngModel)]="selectedDate"
+            (ionChange)="onDateChangeAgendamento()"
+            (ionInput)="onDateChangeEvent($event)"
+            presentation="date">
+          </ion-datetime>
+        </div>
+
+        <div class="form-group" *ngIf="horariosDisponiveis.length > 0">
+          <ion-label position="stacked">Horário *</ion-label>
+          <div class="time-slots">
+            <ion-chip
+              *ngFor="let time of horariosDisponiveis"
+              (click)="selectedTime = time"
+              [class.active]="selectedTime === time">
+              {{ time }}
+            </ion-chip>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <ion-label position="stacked">Observações</ion-label>
+          <textarea
+            [(ngModel)]="observacoes"
+            placeholder="Observações adicionais..."
+            class="form-textarea"
+            rows="3">
+          </textarea>
+        </div>
+
+        <div class="modal-actions">
+          <ion-button
+            fill="outline"
+            (click)="fecharFormularioAgendamento()">
+            Cancelar
+          </ion-button>
+
+          <ion-button
+            fill="solid"
+            color="primary"
+            (click)="criarAgendamentoAdmin()"
+            [disabled]="!selectedProcedimento || !selectedDate || !selectedTime || !clienteNome">
+            Criar Agendamento
+          </ion-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Desmarcar Agendamento -->
+    <ion-modal [isOpen]="showUnmarkModal" (didDismiss)="fecharModalDesmarcar()">
+      <ng-template>
+        <ion-header>
+          <ion-toolbar>
+            <ion-title>Desmarcar Agendamento</ion-title>
+            <ion-buttons slot="end">
+              <ion-button (click)="fecharModalDesmarcar()">
+                <ion-icon name="close-outline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+          </ion-toolbar>
+        </ion-header>
+        <ion-content class="ion-padding">
+          <div *ngIf="selectedAgendamento" class="unmark-modal-content">
+            <h3>Desmarcar Agendamento</h3>
+            <p><strong>Procedimento:</strong> {{ selectedAgendamento.procedimento_nome }}</p>
+            <p><strong>Data:</strong> {{ formatarData(selectedAgendamento.data) }}</p>
+            <p><strong>Hora:</strong> {{ formatarHora(selectedAgendamento.hora) }}</p>
+
+            <ion-item>
+              <ion-label position="stacked">Justificativa *</ion-label>
+              <ion-textarea
+                [(ngModel)]="unmarkJustification"
+                placeholder="Informe o motivo para desmarcar este agendamento..."
+                rows="4">
+              </ion-textarea>
+            </ion-item>
+
+            <div class="modal-actions">
+              <ion-button
+                fill="outline"
+                (click)="fecharModalDesmarcar()">
+                Cancelar
+              </ion-button>
+
+              <ion-button
+                fill="solid"
+                color="danger"
+                (click)="desmarcarAgendamento()"
+                [disabled]="!unmarkJustification.trim()">
+                Desmarcar
+              </ion-button>
+            </div>
+          </div>
+        </ion-content>
+      </ng-template>
+    </ion-modal>
   </div>
 </ion-content>

@@ -20,6 +20,7 @@ export class ConfirmacaoPage {
   hora = '';
   whatsapp = '';
   emailSent = false;
+  profissionalNome = '';
 
   constructor(private router: Router, private route: ActivatedRoute) {
     const nav = this.router.getCurrentNavigation();
@@ -34,6 +35,7 @@ export class ConfirmacaoPage {
       this.hora = state.hora ?? '';
       this.whatsapp = state.whatsapp ?? '';
       this.emailSent = !!state.emailSent;
+      this.profissionalNome = state.profissionalNome ?? '';
     } else {
       const qp = this.route.snapshot.queryParamMap;
       this.id = Number(qp.get('id')) || null;

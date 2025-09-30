@@ -1,26 +1,26 @@
 import { Component, OnInit } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
-import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon } from "@ionic/angular/standalone";
+import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon, IonSegmentButton, IonCard, IonCardContent, IonSegment } from "@ionic/angular/standalone";
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
-import { calendarOutline, personOutline } from 'ionicons/icons';
+import { calendarOutline, personOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-agendamento',
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
-  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
+  imports: [IonCardContent, IonCard, IonSegmentButton, IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, IonSegment, IonSegmentButton, IonCard, IonCardContent, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
   procedimentos: any[] = [];
   profissionais: any[] = [];
   opcoes: any = {};
   selectedProcedimento: number = 0;
-  selectedProfissional: number = 0;
+  selectedProfissional: number = 0; // 0 = Sem preferência
   selectedDate: string = '';
   selectedTime: string = '';
   note: string = '';
@@ -43,20 +43,19 @@ export class AgendamentoPage implements OnInit {
     { id: 'marrom', label: 'Marrom', color: '#8B4513' }
   ];
 
+  // Verificação de duplicidade
+  meusAgendamentos: any[] = [];
+  meusAgendamentosFiltrados: any[] = [];
+  hasActiveAppointment = false;
+  selectedSegment = 'todos';
+
 
   constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute) {
     // Registrar ícones
-    addIcons({personOutline,calendarOutline});
+    addIcons({informationCircleOutline,calendarOutline,timeOutline,personOutline});
   }
 
   async ngOnInit() {
-    // Enforce login
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      this.router.navigateByUrl('/login');
-      return;
-    }
-
     await this.storage.create();
 
     // Load procedures and professionals from database
@@ -93,6 +92,9 @@ export class AgendamentoPage implements OnInit {
 
     // Load professionals
     this.loadProfissionais();
+
+    // Load user appointments to check for duplicates
+    this.loadMeusAgendamentos();
   }
 
   private loadProfissionais(procedimentoId?: number) {
@@ -111,6 +113,126 @@ export class AgendamentoPage implements OnInit {
         console.error('❌ Erro ao carregar profissionais:', err);
       }
     });
+  }
+
+  private loadMeusAgendamentos() {
+    this.api.getMeusAgendamentos().subscribe({
+      next: (res) => {
+        if (res.success) {
+          this.meusAgendamentos = res.agendamentos || [];
+          this.checkForActiveAppointments();
+          this.filtrarMeusAgendamentos();
+        }
+      },
+      error: (err) => {
+        console.error('❌ Erro ao carregar meus agendamentos:', err);
+      }
+    });
+  }
+
+  private checkForActiveAppointments() {
+    const today = new Date().toISOString().split('T')[0];
+    this.hasActiveAppointment = this.meusAgendamentos.some(agendamento => {
+      const agendamentoData = agendamento.data;
+      const status = agendamento.status;
+
+      // Verificar se há agendamento pendente ou confirmado para hoje ou futuro
+      return (status === 'pendente' || status === 'confirmado') && agendamentoData >= today;
+    });
+  }
+
+  filtrarMeusAgendamentos() {
+    if (this.selectedSegment === 'todos') {
+      this.meusAgendamentosFiltrados = this.meusAgendamentos;
+    } else {
+      this.meusAgendamentosFiltrados = this.meusAgendamentos.filter((ag: any) =>
+        ag.status === this.selectedSegment
+      );
+    }
+  }
+
+  onSegmentChange() {
+    this.filtrarMeusAgendamentos();
+  }
+
+  navigateToMeusAgendamentos() {
+    this.router.navigateByUrl('/meus-agendamentos');
+  }
+
+  getStatusColor(status: string): string {
+    switch (status) {
+      case 'pendente': return 'warning';
+      case 'confirmado': return 'success';
+      case 'rejeitado': return 'danger';
+      case 'cancelado': return 'medium';
+      case 'faltou': return 'dark';
+      default: return 'medium';
+    }
+  }
+
+  getStatusText(status: string): string {
+    switch (status) {
+      case 'pendente': return 'Pendente';
+      case 'confirmado': return 'Aprovado';
+      case 'rejeitado': return 'Rejeitado';
+      case 'cancelado': return 'Cancelado';
+      case 'faltou': return 'Faltou';
+      default: return status;
+    }
+  }
+
+  formatarData(data: string): string {
+    if (!data) return '';
+
+    try {
+      // Se a data já está no formato YYYY-MM-DD, usar diretamente
+      if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+        const [year, month, day] = data.split('-');
+        return `${day}/${month}/${year}`;
+      }
+
+      // Se não, tentar converter sem problemas de fuso horário
+      const date = new Date(data + 'T00:00:00');
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return data;
+    }
+  }
+
+  formatarHora(hora: string): string {
+    return hora.substring(0, 5);
+  }
+
+  getNextProfissionalInQueue(): number {
+    if (this.profissionais.length === 0) {
+      return 0;
+    }
+
+    // Por enquanto, usar uma lógica simples baseada no localStorage
+    // para manter a fila entre sessões
+    const lastProfissionalId = localStorage.getItem('lastProfissionalId');
+
+    if (lastProfissionalId) {
+      const currentIndex = this.profissionais.findIndex(p => p.id === parseInt(lastProfissionalId));
+
+      if (currentIndex !== -1) {
+        // Próximo profissional na fila
+        const nextIndex = (currentIndex + 1) % this.profissionais.length;
+        const nextProfissionalId = this.profissionais[nextIndex].id;
+
+        // Salvar o próximo profissional como o último usado
+        localStorage.setItem('lastProfissionalId', nextProfissionalId.toString());
+
+        return nextProfissionalId;
+      }
+    }
+
+    // Se não há histórico, começar com o primeiro
+    const firstProfissionalId = this.profissionais[0].id;
+    localStorage.setItem('lastProfissionalId', firstProfissionalId.toString());
+
+    return firstProfissionalId;
   }
 
   private buildObservacoes(): string | undefined {
@@ -182,27 +304,58 @@ export class AgendamentoPage implements OnInit {
   }
 
   onDateChange() {
-    if (this.selectedDate) {
-      const date = new Date(this.selectedDate).toISOString().split('T')[0];
-      console.log('📅 Buscando horários para data:', date, 'profissional:', this.selectedProfissional, 'procedimento:', this.selectedProcedimento);
+    console.log('🔔 onDateChange CHAMADO!');
 
-      this.api.getHorarios(date, this.selectedProfissional, this.selectedProcedimento).subscribe({
-        next: (res) => {
-          if (res.success) {
+    if (!this.selectedDate) {
+      console.log('❌ selectedDate está vazio!');
+      return;
+    }
+
+    // Corrigir problema de fuso horário - usar apenas a parte da data
+    const date = this.selectedDate.split('T')[0];
+
+    console.log('=== DADOS DA REQUISIÇÃO ===');
+    console.log('Data selecionada:', this.selectedDate);
+    console.log('Data formatada:', date);
+    console.log('Profissional:', this.selectedProfissional);
+    console.log('Procedimento:', this.selectedProcedimento);
+    console.log('=========================');
+
+    this.api.getHorarios(date, this.selectedProfissional, this.selectedProcedimento).subscribe({
+      next: (res) => {
+        console.log('=== RESPOSTA DA API ===');
+        console.log('Success:', res.success);
+        console.log('Horarios:', res.horarios);
+        console.log('Tipo de horarios:', typeof res.horarios);
+        console.log('É array?:', Array.isArray(res.horarios));
+        console.log('Resposta completa:', res);
+        console.log('=====================');
+
+        if (res.success) {
+          if (res.horarios && Array.isArray(res.horarios) && res.horarios.length > 0) {
             this.horariosDisponiveis = res.horarios.map((h: any) => h.hora.substring(0, 5));
-            console.log('⏰ Horários carregados:', this.horariosDisponiveis);
+            console.log('✅ Horários carregados:', this.horariosDisponiveis.length, 'horários');
           } else {
-            console.warn('❌ API retornou success: false');
+            console.warn('⚠️ API retornou success: true, mas sem horários');
             this.horariosDisponiveis = [];
           }
-        },
-        error: (err) => {
-          console.error('❌ Erro ao carregar horários:', err);
-          alert(`❌ ERRO: ${err.message || 'Falha na comunicação'}`);
+        } else {
+          console.warn('❌ API retornou success: false');
+          console.warn('Mensagem:', res.message);
           this.horariosDisponiveis = [];
         }
-      });
-    }
+      },
+      error: (err) => {
+        console.error('=== ERRO NA API ===');
+        console.error('Erro completo:', err);
+        console.error('Status:', err.status);
+        console.error('Message:', err.message);
+        console.error('Error:', err.error);
+        console.error('==================');
+        alert(`Erro ao buscar horários: ${err.message}`);
+        this.horariosDisponiveis = [];
+      }
+    });
   }
 
   async setProcedimento(procedimentoId: number) {
@@ -350,23 +503,56 @@ export class AgendamentoPage implements OnInit {
 
   // Filtrar horários que não conflitam
   get horariosDisponiveisFiltrados(): string[] {
-    const filtered = this.horariosDisponiveis.filter(slot => !this.conflictWithDuration(slot));
+    console.log('🔍 Filtrando horários...');
+    console.log('🔍 Horários disponíveis antes do filtro:', this.horariosDisponiveis);
+    console.log('🔍 Duração do procedimento:', this.currentDuration);
 
+    const filtered = this.horariosDisponiveis.filter(slot => {
+      const conflict = this.conflictWithDuration(slot);
+      console.log(`🔍 Horário ${slot} - Conflito: ${conflict}`);
+      return !conflict;
+    });
+
+    console.log('🔍 Horários filtrados:', filtered);
     return filtered;
   }
 
   onSubmit() {
-    if (!this.selectedProcedimento || this.selectedProfissional === null || this.selectedProfissional === undefined || !this.selectedDate || !this.selectedTime) {
-      alert('Selecione procedimento, profissional, data e horário.');
+    if (!this.selectedProcedimento || !this.selectedDate || !this.selectedTime) {
+      alert('Selecione procedimento, data e horário.');
+      return;
+    }
+
+    if (this.selectedProfissional === null || this.selectedProfissional === undefined) {
+      alert('Selecione um profissional ou escolha "Sem preferência" para agendamento automático.');
+      return;
+    }
+
+    // Verificar se já existe agendamento ativo
+    if (this.hasActiveAppointment) {
+      alert('Você já possui um agendamento pendente ou confirmado. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.');
       return;
     }
 
     const dateIso = this.selectedDate;
     const date = dateIso ? dateIso.slice(0, 10) : '';
 
+    // Se "Sem preferência" foi selecionado (selectedProfissional = 0), usar sistema de fila
+    let profissionalId = this.selectedProfissional;
+    if (profissionalId === 0) {
+      profissionalId = this.getNextProfissionalInQueue();
+      if (profissionalId === 0) {
+        alert('Nenhum profissional disponível para este horário. Tente outro horário.');
+        return;
+      }
+    } else {
+      // Salvar o profissional selecionado para manter a fila
+      localStorage.setItem('lastProfissionalId', profissionalId.toString());
+    }
+
     this.api.createAppointment({
       procedimento_id: this.selectedProcedimento,
-      profissional_id: this.selectedProfissional,
+      profissional_id: profissionalId,
       data: date,
       hora: this.selectedTime,
       observacoes: this.buildObservacoes(),
@@ -386,6 +572,7 @@ export class AgendamentoPage implements OnInit {
             tipoCilios: this.tipoCilios || undefined,
             corCilios: this.corCilios || undefined,
             corLabios: this.corLabios || undefined,
+            profissionalNome: this.profissionais.find(p => p.id === profissionalId)?.nome || 'Profissional',
           };
           this.router.navigateByUrl('/confirmacao', { state });
         } else {

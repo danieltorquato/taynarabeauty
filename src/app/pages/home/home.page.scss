@@ -33,12 +33,12 @@ ion-content {
 .banner h1 {
   font-size: 2rem;
   margin-top: 15px;
-  color: #9e4a7a;
+  color: #f28cb4;
   text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
 }
 
 .banner p {
-  color: #444;
+  color: #333;
   font-size: 1.1rem;
 }
 
@@ -92,7 +92,7 @@ ion-card-content {
 .user-info {
   display: flex;
   flex-direction: column;
-  color: white;
+  color: #333;
 
   span:first-child {
     font-weight: 600;
@@ -191,7 +191,7 @@ ion-card-content {
   }
 
   ion-card-content {
-    color: #666;
+    color: #333;
   }
 }
 
@@ -224,14 +224,14 @@ ion-card-content {
 
   .stat-label {
     font-size: 1rem;
-    color: #666;
+    color: #333;
     text-align: center;
     font-weight: 500;
   }
 
   .stat-detail {
     font-size: 0.9rem;
-    color: #888;
+    color: #333;
     text-align: center;
     margin-top: 5px;
   }

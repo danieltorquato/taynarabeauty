@@ -1,0 +1,58 @@
+<div class="notification-container">
+  <ion-button
+    fill="clear"
+    (click)="toggleDropdown()"
+    class="notification-button">
+    <ion-icon
+      [name]="unreadCount > 0 ? 'notifications' : 'notifications-outline'"
+      slot="icon-only">
+    </ion-icon>
+    <ion-badge
+      *ngIf="unreadCount > 0"
+      color="danger"
+      class="notification-badge">
+      {{ unreadCount > 99 ? '99+' : unreadCount }}
+    </ion-badge>
+  </ion-button>
+
+  <div class="notification-dropdown" *ngIf="showDropdown">
+    <div class="dropdown-header">
+      <h3>Notificações</h3>
+      <ion-button
+        fill="clear"
+        size="small"
+        (click)="markAllAsRead()"
+        [disabled]="unreadCount === 0">
+        Marcar todas como lidas
+      </ion-button>
+    </div>
+
+    <div class="notification-list">
+      <div
+        *ngFor="let notification of notifications"
+        class="notification-item"
+        [class.unread]="!notification.read"
+        (click)="handleNotificationClick(notification)">
+        <div class="notification-content">
+          <h4>{{ notification.title }}</h4>
+          <p>{{ notification.message }}</p>
+          <span class="notification-time">{{ formatTime(notification.timestamp) }}</span>
+        </div>
+        <div class="notification-indicator" *ngIf="!notification.read"></div>
+      </div>
+
+      <div *ngIf="notifications.length === 0" class="no-notifications">
+        <p>Nenhuma notificação</p>
+      </div>
+    </div>
+
+    <div class="dropdown-footer" *ngIf="notifications.length > 0">
+      <ion-button
+        fill="clear"
+        size="small"
+        (click)="goToAllNotifications()">
+        Ver todas as notificações
+      </ion-button>
+    </div>
+  </div>
+</div>

@@ -14,6 +14,38 @@
       <p>Carregando agendamentos...</p>
     </div>
 
+    <!-- Segmentos para filtrar por status -->
+    <div *ngIf="!loading && agendamentos.length > 0" class="segments-container">
+      <ion-segment [(ngModel)]="selectedSegment" (ionChange)="onSegmentChange()">
+        <ion-segment-button value="todos">
+          <ion-label>📋 Todos</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="pendente">
+          <ion-label>⏳ Pendentes</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="confirmado">
+          <ion-label>✅ Aprovados</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="rejeitado">
+          <ion-label>❌ Rejeitados</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+
+    <!-- Botão de Histórico para Clientes -->
+    <div *ngIf="!loading && agendamentos.length > 0" class="history-button-container">
+      <ion-button fill="outline" (click)="abrirHistorico()">
+        <ion-icon name="time-outline" slot="start"></ion-icon>
+        Ver Histórico Completo
+      </ion-button>
+    </div>
+
+    <div *ngIf="!loading && agendamentosFiltrados.length === 0 && agendamentos.length > 0" class="empty-state">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <h2>Nenhum agendamento encontrado</h2>
+      <p>Não há agendamentos para o filtro selecionado.</p>
+    </div>
+
     <div *ngIf="!loading && agendamentos.length === 0" class="empty-state">
       <ion-icon name="calendar-outline"></ion-icon>
       <h2>Nenhum agendamento encontrado</h2>
@@ -23,8 +55,8 @@
       </ion-button>
     </div>
 
-    <div *ngIf="!loading && agendamentos.length > 0" class="agendamentos-list">
-      <ion-card *ngFor="let agendamento of agendamentos" class="agendamento-card">
+    <div *ngIf="!loading && agendamentosFiltrados.length > 0" class="agendamentos-list">
+      <ion-card *ngFor="let agendamento of agendamentosFiltrados" class="agendamento-card">
         <ion-card-header>
           <div class="agendamento-header">
             <div class="agendamento-info">
@@ -52,7 +84,15 @@
             </div>
           </div>
 
-          <div class="agendamento-actions">
+          <!-- Motivo da rejeição - sempre exibido para agendamentos rejeitados -->
+          <div *ngIf="agendamento.status === 'rejeitado' && agendamento.motivo_rejeicao" class="motivo-rejeicao-section">
+            <p class="motivo-rejeicao">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              <strong>Motivo da rejeição:</strong> {{ agendamento.motivo_rejeicao }}
+            </p>
+          </div>
+
+          <div class="agendamento-actions" *ngIf="agendamento.status !== 'rejeitado'">
             <ion-button
               fill="clear"
               size="small"
@@ -107,6 +147,11 @@
           <p>{{ selectedAgendamento.observacoes }}</p>
         </div>
 
+        <div class="detail-section" *ngIf="selectedAgendamento.motivo_rejeicao">
+          <h3>Motivo da Rejeição</h3>
+          <p class="motivo-rejeicao">{{ selectedAgendamento.motivo_rejeicao }}</p>
+        </div>
+
         <div class="detail-section">
           <h3>Status</h3>
           <ion-chip [color]="getStatusColor(selectedAgendamento.status)">
@@ -126,4 +171,49 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Histórico -->
+  <ion-modal [isOpen]="showHistoryModal" (didDismiss)="fecharHistorico()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Histórico de Agendamentos</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="fecharHistorico()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <div *ngIf="historicoAgendamentos.length === 0" class="empty-state">
+          <ion-icon name="calendar-outline"></ion-icon>
+          <h2>Nenhum agendamento no histórico</h2>
+        </div>
+
+        <ion-list *ngIf="historicoAgendamentos.length > 0">
+          <ion-card *ngFor="let agendamento of historicoAgendamentos" class="history-card">
+            <ion-card-content>
+              <div class="history-header">
+                <h3>{{ agendamento.procedimento_nome }}</h3>
+                <ion-chip [color]="getStatusColor(agendamento.status)">
+                  {{ getStatusText(agendamento.status) }}
+                </ion-chip>
+              </div>
+
+              <div class="history-details">
+                <p><ion-icon name="calendar-outline"></ion-icon> {{ formatarData(agendamento.data) }}</p>
+                <p><ion-icon name="time-outline"></ion-icon> {{ formatarHora(agendamento.hora) }}</p>
+                <p *ngIf="agendamento.profissional_nome"><ion-icon name="person-outline"></ion-icon> {{ agendamento.profissional_nome }}</p>
+                <p *ngIf="agendamento.motivo_rejeicao" class="rejection-reason">
+                  <ion-icon name="alert-circle-outline"></ion-icon>
+                  <strong>Motivo da rejeição:</strong> {{ agendamento.motivo_rejeicao }}
+                </p>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        </ion-list>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

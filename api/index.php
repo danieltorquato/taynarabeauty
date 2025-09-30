@@ -70,6 +70,12 @@ if (preg_match('/^\/agendamentos\/(\d+)\/cancelar$/', $route, $matches) && $_SER
     exit;
 }
 
+if (preg_match('/^\/agendamentos\/(\d+)\/desmarcar$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new AgendamentosController();
+    $controller->desmarcar($matches[1]);
+    exit;
+}
+
 if ($route === '/procedimentos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new ProcedimentosController();
     $controller->listar();

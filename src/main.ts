@@ -6,6 +6,7 @@ import { Storage } from '@ionic/storage-angular';
 
 import { routes } from './app/app.routes';
 import { AppComponent } from './app/app.component';
+import { AuthService } from './app/services/auth.service';
 
 bootstrapApplication(AppComponent, {
   providers: [

@@ -15,6 +15,7 @@ export interface User {
 export class AuthService {
   private _user = new BehaviorSubject<User | null>(null);
   private _isAuthenticated = new BehaviorSubject<boolean>(false);
+  private _initialized = false;
 
   constructor(private storage: Storage) {
     this.loadStoredUser();
@@ -38,13 +39,30 @@ export class AuthService {
 
   private async loadStoredUser() {
     try {
+      // Aguardar o storage estar pronto
+      await this.storage.create();
+
       const user = await this.storage.get('user');
-      if (user) {
+      const token = await this.storage.get('token');
+
+      if (user && token) {
         this._user.next(user);
         this._isAuthenticated.next(true);
+      } else {
+        // Limpar dados inválidos se existirem
+        await this.storage.remove('user');
+        await this.storage.remove('token');
+        this._user.next(null);
+        this._isAuthenticated.next(false);
       }
+
+      this._initialized = true;
     } catch (error) {
       console.error('Erro ao carregar usuário armazenado:', error);
+      // Em caso de erro, garantir que o usuário não esteja autenticado
+      this._user.next(null);
+      this._isAuthenticated.next(false);
+      this._initialized = true;
     }
   }
 
@@ -72,7 +90,10 @@ export class AuthService {
 
   hasRole(requiredRole: string | string[]): boolean {
     const user = this.currentUser;
-    if (!user) return false;
+
+    if (!user) {
+      return false;
+    }
 
     if (Array.isArray(requiredRole)) {
       return requiredRole.includes(user.role);
