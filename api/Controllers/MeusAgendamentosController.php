@@ -156,13 +156,42 @@ class MeusAgendamentosController {
         }
 
         try {
+            // Buscar dados do agendamento para liberar horários
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $id);
+            $stmt->execute();
+            $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$agendamento) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Agendamento não encontrado']);
+                return;
+            }
+
+            // Atualizar status para cancelado
             $stmt = $conn->prepare('UPDATE agendamentos SET status = "cancelado" WHERE id = :id');
             $stmt->bindParam(':id', $id);
             $stmt->execute();
 
+            // Liberar horários bloqueados
+            // Garantir que a hora esteja no formato correto (HH:MM:SS)
+            $horaFormatada = $agendamento['hora'];
+            if (strlen($horaFormatada) === 5) {
+                $horaFormatada .= ':00';
+            }
+
+            $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
+            $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
+            $stmt->bindParam(':data', $agendamento['data']);
+            $stmt->bindParam(':hora', $horaFormatada);
+            $stmt->execute();
+
+            // Log para debug
+            error_log("Tentando liberar horário: profissional_id={$agendamento['profissional_id']}, data={$agendamento['data']}, hora={$horaFormatada}");
+
             echo json_encode([
                 'success' => true,
-                'message' => 'Agendamento cancelado com sucesso'
+                'message' => 'Agendamento cancelado com sucesso. Os horários foram liberados.'
             ]);
         } catch (Throwable $e) {
             error_log('Erro MeusAgendamentosController::cancelar: ' . $e->getMessage());

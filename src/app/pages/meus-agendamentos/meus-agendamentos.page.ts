@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
@@ -13,7 +13,7 @@ import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, cl
   templateUrl: './meus-agendamentos.page.html',
   styleUrls: ['./meus-agendamentos.page.scss'],
   standalone: true,
-  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, IonItem, CommonModule, FormsModule]
+  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, CommonModule, FormsModule]
 })
 export class MeusAgendamentosPage implements OnInit {
   agendamentos: any[] = [];
@@ -111,39 +111,6 @@ export class MeusAgendamentosPage implements OnInit {
     this.selectedAgendamento = null;
   }
 
-  cancelarAgendamento(agendamento: any) {
-    if (confirm('Deseja realmente cancelar este agendamento?')) {
-      this.api.cancelarAgendamento(agendamento.id).subscribe({
-        next: (res) => {
-          if (res.success) {
-            alert('Agendamento cancelado com sucesso!');
-            this.carregarAgendamentos();
-          }
-        },
-        error: (err) => {
-          console.error('Erro ao cancelar agendamento:', err);
-          alert('Erro ao cancelar agendamento');
-        }
-      });
-    }
-  }
-
-  verProcedimento() {
-    // Mapear nome do procedimento para ID da rota
-    const procedimentoMap: { [key: string]: string } = {
-      'Volume Brasileiro': 'volume-brasileiro',
-      'Volume Inglês': 'volume-ingles',
-      'Fox Eyes - Raposinha': 'fox-eyes',
-      'Fox Eyes': 'fox-eyes',
-      'Hidragloss - Lips': 'hidragloss',
-      'Hidragloss': 'hidragloss',
-      'Lash Lifting': 'lash-lifting'
-    };
-
-    const procedimentoId = procedimentoMap[this.selectedAgendamento?.procedimento_nome] || 'volume-brasileiro';
-    this.router.navigateByUrl(`/procedimento-detalhes/${procedimentoId}`);
-    this.fecharDetalhes();
-  }
 
   getStatusColor(status: string): string {
     switch (status) {
@@ -168,8 +135,22 @@ export class MeusAgendamentosPage implements OnInit {
   }
 
   formatarData(data: string): string {
-    const date = new Date(data);
-    return date.toLocaleDateString('pt-BR');
+    if (!data) return '';
+
+    try {
+      // Se a data já está no formato YYYY-MM-DD, usar diretamente
+      if (/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+        const [year, month, day] = data.split('-');
+        return `${day}/${month}/${year}`;
+      }
+
+      // Se não, tentar converter sem problemas de fuso horário
+      const date = new Date(data + 'T00:00:00');
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return data;
+    }
   }
 
   formatarHora(hora: string): string {
@@ -178,5 +159,91 @@ export class MeusAgendamentosPage implements OnInit {
 
   irParaCursos() {
     this.router.navigateByUrl('/cursos');
+  }
+
+  verProcedimento() {
+    const procedimentoMap: { [key: string]: string } = {
+      'Volume Brasileiro': 'volume-brasileiro',
+      'Volume Inglês': 'volume-ingles',
+      'Fox Eyes - Raposinha': 'fox-eyes',
+      'Fox Eyes': 'fox-eyes',
+      'Hidragloss - Lips': 'hidragloss',
+      'Hidragloss': 'hidragloss',
+      'Lash Lifting': 'lash-lifting'
+    };
+
+    const procedimentoId = procedimentoMap[this.selectedAgendamento?.procedimento_nome] || 'volume-brasileiro';
+    this.router.navigateByUrl(`/procedimento-detalhes/${procedimentoId}`);
+    this.fecharDetalhes();
+  }
+
+  // Verificar se o usuário é profissional
+  isProfissional(): boolean {
+    const currentUser = this.authService.currentUser;
+    return currentUser?.role === 'profissional' || currentUser?.role === 'admin';
+  }
+
+  // Aprovar agendamento
+  aprovarAgendamento(agendamento: any) {
+    if (confirm('Deseja aprovar este agendamento?')) {
+      this.api.aprovarAgendamento(agendamento.id).subscribe({
+        next: (res) => {
+          if (res.success) {
+            alert('Agendamento aprovado com sucesso!');
+            this.carregarAgendamentos();
+            this.fecharDetalhes();
+          } else {
+            alert('Erro ao aprovar agendamento: ' + res.message);
+          }
+        },
+        error: (err) => {
+          console.error('Erro ao aprovar agendamento:', err);
+          alert('Erro ao aprovar agendamento');
+        }
+      });
+    }
+  }
+
+  // Rejeitar agendamento
+  rejeitarAgendamento(agendamento: any) {
+    const motivo = prompt('Digite o motivo da rejeição (opcional):');
+    if (motivo !== null) { // Usuário não cancelou
+      this.api.rejeitarAgendamento(agendamento.id, motivo).subscribe({
+        next: (res) => {
+          if (res.success) {
+            alert('Agendamento rejeitado. Os horários foram liberados.');
+            this.carregarAgendamentos();
+            this.fecharDetalhes();
+          } else {
+            alert('Erro ao rejeitar agendamento: ' + res.message);
+          }
+        },
+        error: (err) => {
+          console.error('Erro ao rejeitar agendamento:', err);
+          alert('Erro ao rejeitar agendamento');
+        }
+      });
+    }
+  }
+
+  // Cancelar agendamento
+  cancelarAgendamento(agendamento: any) {
+    if (confirm('Deseja cancelar este agendamento? Os horários serão liberados.')) {
+      this.api.cancelarAgendamentoAdmin(agendamento.id).subscribe({
+        next: (res) => {
+          if (res.success) {
+            alert('Agendamento cancelado. Os horários foram liberados.');
+            this.carregarAgendamentos();
+            this.fecharDetalhes();
+          } else {
+            alert('Erro ao cancelar agendamento: ' + res.message);
+          }
+        },
+        error: (err) => {
+          console.error('Erro ao cancelar agendamento:', err);
+          alert('Erro ao cancelar agendamento');
+        }
+      });
+    }
   }
 }

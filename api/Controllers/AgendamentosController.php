@@ -33,17 +33,25 @@ class AgendamentosController {
         }
 
         try {
-            // Verificar se existe agendamento pendente ou confirmado para hoje ou futuro
-            $stmt = $conn->prepare('SELECT id, status, data FROM agendamentos WHERE usuario_id = :usuario_id AND status IN ("pendente", "confirmado") AND data >= CURDATE() LIMIT 1');
+            // Verificar se existe agendamento pendente ou confirmado para o MESMO procedimento
+            $stmt = $conn->prepare('SELECT id, status, data, procedimento_id FROM agendamentos WHERE usuario_id = :usuario_id AND status IN ("pendente", "confirmado") AND data >= CURDATE() AND procedimento_id = :procedimento_id LIMIT 1');
             $stmt->bindParam(':usuario_id', $usuario_id);
+            $stmt->bindParam(':procedimento_id', $procedimento_id);
             $stmt->execute();
             $agendamentoExistente = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($agendamentoExistente) {
+                // Buscar nome do procedimento para a mensagem
+                $stmt = $conn->prepare('SELECT nome FROM procedimentos WHERE id = :id LIMIT 1');
+                $stmt->bindParam(':id', $procedimento_id);
+                $stmt->execute();
+                $procedimento = $stmt->fetch(PDO::FETCH_ASSOC);
+                $nomeProcedimento = $procedimento ? $procedimento['nome'] : 'este procedimento';
+
                 http_response_code(422);
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Você já possui um agendamento ' . $agendamentoExistente['status'] . ' para ' . date('d/m/Y', strtotime($agendamentoExistente['data'])) . '. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.'
+                    'message' => 'Você já possui um agendamento ' . $agendamentoExistente['status'] . ' para ' . $nomeProcedimento . ' em ' . date('d/m/Y', strtotime($agendamentoExistente['data'])) . '. Você pode agendar outros procedimentos diferentes.'
                 ]);
                 return;
             }
@@ -341,11 +349,20 @@ class AgendamentosController {
 
             // Liberar horários
             if ($agendamento) {
+                // Garantir que a hora esteja no formato correto (HH:MM:SS)
+                $horaFormatada = $agendamento['hora'];
+                if (strlen($horaFormatada) === 5) {
+                    $horaFormatada .= ':00';
+                }
+
                 $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
                 $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
                 $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->bindParam(':hora', $horaFormatada);
                 $stmt->execute();
+
+                // Log para debug
+                error_log("Tentando liberar horário: profissional_id={$agendamento['profissional_id']}, data={$agendamento['data']}, hora={$horaFormatada}");
             }
 
             echo json_encode([
@@ -385,11 +402,20 @@ class AgendamentosController {
 
             // Liberar horários
             if ($agendamento) {
+                // Garantir que a hora esteja no formato correto (HH:MM:SS)
+                $horaFormatada = $agendamento['hora'];
+                if (strlen($horaFormatada) === 5) {
+                    $horaFormatada .= ':00';
+                }
+
                 $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
                 $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
                 $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->bindParam(':hora', $horaFormatada);
                 $stmt->execute();
+
+                // Log para debug
+                error_log("Tentando liberar horário: profissional_id={$agendamento['profissional_id']}, data={$agendamento['data']}, hora={$horaFormatada}");
             }
 
             echo json_encode([
@@ -429,11 +455,20 @@ class AgendamentosController {
 
             // Liberar horários
             if ($agendamento) {
+                // Garantir que a hora esteja no formato correto (HH:MM:SS)
+                $horaFormatada = $agendamento['hora'];
+                if (strlen($horaFormatada) === 5) {
+                    $horaFormatada .= ':00';
+                }
+
                 $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
                 $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
                 $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
+                $stmt->bindParam(':hora', $horaFormatada);
                 $stmt->execute();
+
+                // Log para debug
+                error_log("Tentando liberar horário: profissional_id={$agendamento['profissional_id']}, data={$agendamento['data']}, hora={$horaFormatada}");
             }
 
             echo json_encode([
@@ -540,11 +575,20 @@ class AgendamentosController {
             $stmt->execute();
 
             // Liberar horários
+            // Garantir que a hora esteja no formato correto (HH:MM:SS)
+            $horaFormatada = $agendamento['hora'];
+            if (strlen($horaFormatada) === 5) {
+                $horaFormatada .= ':00';
+            }
+
             $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
             $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
             $stmt->bindParam(':data', $agendamento['data']);
-            $stmt->bindParam(':hora', $agendamento['hora']);
+            $stmt->bindParam(':hora', $horaFormatada);
             $stmt->execute();
+
+            // Log para debug
+            error_log("Tentando liberar horário: profissional_id={$agendamento['profissional_id']}, data={$agendamento['data']}, hora={$horaFormatada}");
 
             echo json_encode([
                 'success' => true,

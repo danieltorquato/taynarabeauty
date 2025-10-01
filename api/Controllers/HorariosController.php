@@ -28,15 +28,15 @@ class HorariosController {
                 $whereConditions = ['data = :data', 'status = "livre"'];
                 $params = [':data' => $data];
 
-                // Se profissional foi especificado e não é 0, filtrar por ele
+                // Se profissional foi especificado e não é 0, filtrar por ele ou NULL
                 if ($profissionalId && $profissionalId > 0) {
-                    $whereConditions[] = 'profissional_id = :profissional_id';
+                    $whereConditions[] = '(profissional_id = :profissional_id OR profissional_id IS NULL)';
                     $params[':profissional_id'] = $profissionalId;
                 }
 
-                // Se procedimento foi especificado, filtrar por ele
+                // Se procedimento foi especificado, filtrar por ele ou NULL
                 if ($procedimentoId && $procedimentoId > 0) {
-                    $whereConditions[] = 'procedimento_id = :procedimento_id';
+                    $whereConditions[] = '(procedimento_id = :procedimento_id OR procedimento_id IS NULL)';
                     $params[':procedimento_id'] = $procedimentoId;
                 }
 

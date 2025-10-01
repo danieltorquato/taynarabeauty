@@ -51,6 +51,13 @@ ion-content {
   }
 }
 
+// Indicador de agendamento ativo no select
+.agendamento-ativo-indicator {
+  color: #ff6b6b;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
 // Estilos para os segmentos
 .segments-container {
   margin: 1rem 0;

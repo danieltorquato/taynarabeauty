@@ -228,6 +228,12 @@ export class DashboardAdminPage implements OnInit {
       ...(procedimentoId && { procedimento_id: procedimentoId })
     };
 
+    // Se for "Liberar Todos", não passar IDs específicos para liberar para todos
+    if (this.selectedProfissional === '0' && this.selectedProcedimento === '0') {
+      delete batchData.profissional_id;
+      delete batchData.procedimento_id;
+    }
+
     this.api.salvarHorariosBatch(batchData).subscribe({
       next: (res) => {
         if (res.success) {
@@ -441,8 +447,14 @@ export class DashboardAdminPage implements OnInit {
       return;
     }
 
-    const profissionalId = this.selectedProfissional === '0' ? undefined : parseInt(this.selectedProfissional);
-    const procedimentoId = this.selectedProcedimento === '0' ? undefined : parseInt(this.selectedProcedimento);
+    // Validar se há profissional e procedimento selecionados
+    if (this.selectedProfissional === '0' || this.selectedProcedimento === '0') {
+      alert('Para liberar horários específicos, você deve selecionar um profissional e um procedimento específicos.');
+      return;
+    }
+
+    const profissionalId = parseInt(this.selectedProfissional);
+    const procedimentoId = parseInt(this.selectedProcedimento);
 
     // Gerar horários entre o horário inicial e final
     const horarios = this.gerarHorariosIntervalo(this.horarioInicial, this.horarioFinal);
@@ -482,8 +494,14 @@ export class DashboardAdminPage implements OnInit {
       return;
     }
 
-    const profissionalId = this.selectedProfissional === '0' ? undefined : parseInt(this.selectedProfissional);
-    const procedimentoId = this.selectedProcedimento === '0' ? undefined : parseInt(this.selectedProcedimento);
+    // Validar se há profissional e procedimento selecionados
+    if (this.selectedProfissional === '0' || this.selectedProcedimento === '0') {
+      alert('Para liberar uma semana específica, você deve selecionar um profissional e um procedimento específicos.');
+      return;
+    }
+
+    const profissionalId = parseInt(this.selectedProfissional);
+    const procedimentoId = parseInt(this.selectedProcedimento);
 
     // Calcular data de fim (7 dias a partir da data selecionada)
     const dataInicio = new Date(this.selectedDate);

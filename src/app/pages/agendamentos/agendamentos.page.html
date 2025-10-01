@@ -13,8 +13,8 @@
     <div *ngIf="hasActiveAppointment" class="active-appointment-warning">
       <ion-icon name="information-circle-outline"></ion-icon>
       <div class="warning-content">
-        <h3>Você já possui um agendamento ativo</h3>
-        <p>Você não pode fazer um novo agendamento enquanto tiver um agendamento pendente ou confirmado.</p>
+        <h3>Você já possui um agendamento ativo para este procedimento</h3>
+        <p>Você não pode fazer um novo agendamento para o mesmo procedimento enquanto tiver um agendamento pendente ou confirmado. Selecione outro procedimento para continuar.</p>
         <ion-button fill="outline" size="small" (click)="navigateToMeusAgendamentos()">
           Ver meus agendamentos
         </ion-button>
@@ -23,13 +23,16 @@
 
 
 
-    <ion-list lines="none" class="card" [class.disabled]="hasActiveAppointment">
+    <ion-list lines="none" class="card">
 
       <!-- Procedimento -->
       <ion-item>
         <ion-label position="stacked">Procedimento</ion-label>
         <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="setProcedimento(selectedProcedimento)">
-          <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">{{ p.nome }} </ion-select-option>
+          <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">
+            {{ p.nome }}
+            <span *ngIf="hasActiveAppointmentForProcedimento(p.id)" class="agendamento-ativo-indicator"> (Agendamento Ativo)</span>
+          </ion-select-option>
         </ion-select>
       </ion-item>
 

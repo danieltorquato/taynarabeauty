@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
-import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon, IonSegmentButton, IonCard, IonCardContent, IonSegment } from "@ionic/angular/standalone";
+import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon } from "@ionic/angular/standalone";
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -13,7 +13,7 @@ import { calendarOutline, personOutline, informationCircleOutline, timeOutline }
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
-  imports: [IonCardContent, IonCard, IonSegmentButton, IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, IonSegment, IonSegmentButton, IonCard, IonCardContent, CommonModule, FormsModule]
+  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
   procedimentos: any[] = [];
@@ -72,16 +72,22 @@ export class AgendamentoPage implements OnInit {
             if (ciliosProcedure) {
               this.selectedProcedimento = ciliosProcedure.id;
               this.setDefaultOptions();
+              // Carregar profissionais específicos para cílios
+              this.loadProfissionais(ciliosProcedure.id);
             }
           } else if (param === 'labios') {
             const labiosProcedure = this.procedimentos.find(p => p.categoria === 'labios');
             if (labiosProcedure) {
               this.selectedProcedimento = labiosProcedure.id;
               this.setDefaultOptions();
+              // Carregar profissionais específicos para lábios
+              this.loadProfissionais(labiosProcedure.id);
             }
           } else if (this.procedimentos.length > 0) {
             this.selectedProcedimento = this.procedimentos[0].id;
             this.setDefaultOptions();
+            // Carregar profissionais para o primeiro procedimento
+            this.loadProfissionais(this.procedimentos[0].id);
           }
         }
       },
@@ -90,15 +96,20 @@ export class AgendamentoPage implements OnInit {
       }
     });
 
-    // Load professionals
-    this.loadProfissionais();
-
     // Load user appointments to check for duplicates
     this.loadMeusAgendamentos();
   }
 
   private loadProfissionais(procedimentoId?: number) {
     console.log('🔄 Carregando profissionais para procedimento:', procedimentoId);
+
+    // Se não há procedimento selecionado, não carregar profissionais
+    if (!procedimentoId) {
+      this.profissionais = [];
+      this.selectedProfissional = 0;
+      return;
+    }
+
     this.api.getProfissionais(procedimentoId).subscribe({
       next: (res) => {
         if (res.success) {
@@ -111,6 +122,8 @@ export class AgendamentoPage implements OnInit {
       },
       error: (err) => {
         console.error('❌ Erro ao carregar profissionais:', err);
+        this.profissionais = [];
+        this.selectedProfissional = 0;
       }
     });
   }
@@ -135,9 +148,29 @@ export class AgendamentoPage implements OnInit {
     this.hasActiveAppointment = this.meusAgendamentos.some(agendamento => {
       const agendamentoData = agendamento.data;
       const status = agendamento.status;
+      const procedimentoId = agendamento.procedimento_id;
 
       // Verificar se há agendamento pendente ou confirmado para hoje ou futuro
-      return (status === 'pendente' || status === 'confirmado') && agendamentoData >= today;
+      // E se é do mesmo procedimento que está sendo selecionado
+      return (status === 'pendente' || status === 'confirmado') &&
+             agendamentoData >= today &&
+             procedimentoId === this.selectedProcedimento;
+    });
+  }
+
+  // Verificar se um procedimento específico tem agendamento ativo
+  hasActiveAppointmentForProcedimento(procedimentoId: number): boolean {
+    const today = new Date().toISOString().split('T')[0];
+    return this.meusAgendamentos.some(agendamento => {
+      const agendamentoData = agendamento.data;
+      const status = agendamento.status;
+      const agendamentoProcedimentoId = agendamento.procedimento_id;
+
+      // Verificar se há agendamento pendente ou confirmado para hoje ou futuro
+      // E se é do mesmo procedimento
+      return (status === 'pendente' || status === 'confirmado') &&
+             agendamentoData >= today &&
+             agendamentoProcedimentoId === procedimentoId;
     });
   }
 
@@ -311,11 +344,11 @@ export class AgendamentoPage implements OnInit {
       return;
     }
 
-    // Corrigir problema de fuso horário - usar apenas a parte da data
-    const date = this.selectedDate.split('T')[0];
+    // Corrigir problema de fuso horário
+    const date = this.corrigirDataFusoHorario(this.selectedDate);
 
     console.log('=== DADOS DA REQUISIÇÃO ===');
-    console.log('Data selecionada:', this.selectedDate);
+    console.log('Data selecionada original:', this.selectedDate);
     console.log('Data formatada:', date);
     console.log('Profissional:', this.selectedProfissional);
     console.log('Procedimento:', this.selectedProcedimento);
@@ -366,6 +399,9 @@ export class AgendamentoPage implements OnInit {
 
     // Recarregar profissionais baseado no procedimento selecionado
     this.loadProfissionais(procedimentoId);
+
+    // Recarregar verificação de duplicidade para o novo procedimento
+    this.checkForActiveAppointments();
   }
 
   // Helper methods for template
@@ -501,6 +537,28 @@ export class AgendamentoPage implements OnInit {
     return false;
   }
 
+  // Método auxiliar para corrigir problemas de fuso horário na data
+  private corrigirDataFusoHorario(dataOriginal: string): string {
+    if (!dataOriginal) return '';
+
+    // Tentar extrair a data no formato YYYY-MM-DD
+    let date = dataOriginal.split('T')[0];
+
+    // Se a data não está no formato correto, tentar corrigir
+    if (!date || date.length !== 10) {
+      // Tentar extrair a data de uma string ISO completa
+      const dateObj = new Date(dataOriginal);
+      if (!isNaN(dateObj.getTime())) {
+        // Usar UTC para evitar problemas de fuso horário
+        date = dateObj.getUTCFullYear() + '-' +
+               String(dateObj.getUTCMonth() + 1).padStart(2, '0') + '-' +
+               String(dateObj.getUTCDate()).padStart(2, '0');
+      }
+    }
+
+    return date;
+  }
+
   // Filtrar horários que não conflitam
   get horariosDisponiveisFiltrados(): string[] {
     console.log('🔍 Filtrando horários...');
@@ -528,14 +586,21 @@ export class AgendamentoPage implements OnInit {
       return;
     }
 
-    // Verificar se já existe agendamento ativo
+    // Verificar se já existe agendamento ativo para este procedimento
     if (this.hasActiveAppointment) {
-      alert('Você já possui um agendamento pendente ou confirmado. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.');
+      const procedimentoNome = this.procedimentos.find(p => p.id === this.selectedProcedimento)?.nome || 'este procedimento';
+      alert(`Você já possui um agendamento pendente ou confirmado para ${procedimentoNome}. Você pode agendar outros procedimentos diferentes.`);
       return;
     }
 
-    const dateIso = this.selectedDate;
-    const date = dateIso ? dateIso.slice(0, 10) : '';
+    // Corrigir problema de fuso horário
+    const date = this.corrigirDataFusoHorario(this.selectedDate);
+
+    // Debug: Log da data selecionada
+    console.log('🔍 DEBUG DATA AGENDAMENTO:');
+    console.log('selectedDate original:', this.selectedDate);
+    console.log('date final:', date);
+    console.log('selectedTime:', this.selectedTime);
 
     // Se "Sem preferência" foi selecionado (selectedProfissional = 0), usar sistema de fila
     let profissionalId = this.selectedProfissional;
