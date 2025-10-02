@@ -13,11 +13,13 @@ import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, cl
   templateUrl: './meus-agendamentos.page.html',
   styleUrls: ['./meus-agendamentos.page.scss'],
   standalone: true,
-  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, IonItem, CommonModule, FormsModule]
+  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, CommonModule, FormsModule]
 })
 export class MeusAgendamentosPage implements OnInit {
   agendamentos: any[] = [];
   agendamentosFiltrados: any[] = [];
+  agendamentosAtivos: any[] = [];
+  agendamentosConcluidos: any[] = [];
   loading = false;
   selectedAgendamento: any = null;
   showDetails = false;
@@ -63,6 +65,9 @@ export class MeusAgendamentosPage implements OnInit {
           } else {
             this.agendamentos = agendamentos;
           }
+
+          // Separar agendamentos ativos dos concluídos
+          this.separarAgendamentos();
           this.filtrarAgendamentos();
         }
       },
@@ -71,18 +76,67 @@ export class MeusAgendamentosPage implements OnInit {
         console.error('Erro ao carregar agendamentos:', err);
         // Fallback com dados simulados
         this.agendamentos = [];
+        this.agendamentosAtivos = [];
+        this.agendamentosConcluidos = [];
       }
     });
   }
 
+  separarAgendamentos() {
+    const hoje = new Date().toISOString().split('T')[0];
+
+    this.agendamentosAtivos = this.agendamentos.filter((ag: any) => {
+      // Agendamentos ativos: pendentes, confirmados ou futuros
+      const statusAtivo = ag.status === 'pendente' || ag.status === 'confirmado';
+      const dataFutura = ag.data >= hoje;
+      return statusAtivo && dataFutura;
+    });
+
+    this.agendamentosConcluidos = this.agendamentos.filter((ag: any) => {
+      // Agendamentos concluídos: rejeitados, cancelados, faltou ou passados
+      const statusConcluido = ag.status === 'rejeitado' || ag.status === 'cancelado' || ag.status === 'faltou';
+      const dataPassada = ag.data < hoje;
+      return statusConcluido || dataPassada;
+    });
+  }
+
   filtrarAgendamentos() {
+    let agendamentosFiltrados: any[] = [];
+
     if (this.selectedSegment === 'todos') {
-      this.agendamentosFiltrados = this.agendamentos;
+      // Na tela principal, mostrar apenas agendamentos ativos
+      agendamentosFiltrados = [...this.agendamentosAtivos];
     } else {
-      this.agendamentosFiltrados = this.agendamentos.filter((ag: any) =>
+      // Para filtros específicos, usar todos os agendamentos
+      agendamentosFiltrados = this.agendamentos.filter((ag: any) =>
         ag.status === this.selectedSegment
       );
     }
+
+    // Ordenar agendamentos: pendentes primeiro, depois aprovados, depois por data
+    this.agendamentosFiltrados = agendamentosFiltrados.sort((a, b) => {
+      // Prioridade por status: pendente > confirmado > outros
+      const statusPriority = (status: string) => {
+        switch (status) {
+          case 'pendente': return 1;
+          case 'confirmado': return 2;
+          default: return 3;
+        }
+      };
+
+      const aPriority = statusPriority(a.status);
+      const bPriority = statusPriority(b.status);
+
+      // Se as prioridades são diferentes, ordenar por prioridade
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      // Se as prioridades são iguais, ordenar por data (mais recente primeiro)
+      const aDateTime = new Date(a.data + ' ' + a.hora).getTime();
+      const bDateTime = new Date(b.data + ' ' + b.hora).getTime();
+      return bDateTime - aDateTime;
+    });
   }
 
   onSegmentChange() {
@@ -90,6 +144,7 @@ export class MeusAgendamentosPage implements OnInit {
   }
 
   abrirHistorico() {
+    // Incluir todos os agendamentos no histórico (ativos e concluídos)
     this.historicoAgendamentos = [...this.agendamentos].sort((a, b) => {
       // Ordenar por data (mais recente primeiro)
       return new Date(b.data + ' ' + b.hora).getTime() - new Date(a.data + ' ' + a.hora).getTime();
