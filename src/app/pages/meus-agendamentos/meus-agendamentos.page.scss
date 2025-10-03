@@ -3,8 +3,401 @@ ion-content {
   font-family: 'Poppins', sans-serif;
 }
 
+// Breakpoints para desktop
+@media (min-width: 768px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px;
+  }
+
+  .segments-container {
+    margin-bottom: 30px;
+  }
+
+  .segments-container ion-segment {
+    --background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 5px;
+  }
+
+  .segments-container ion-segment-button {
+    --color: #666;
+    --color-checked: #f28cb4;
+    --background-checked: white;
+    --border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .history-button-container {
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .history-button-container ion-button {
+    --background: linear-gradient(135deg, #f28cb4, #e91e63);
+    --color: white;
+    --border-radius: 15px;
+    height: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(242, 140, 180, 0.4);
+  }
+
+  .agendamento-card {
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+  }
+
+  .agendamento-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  }
+
+  .agendamento-header {
+    padding: 25px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .agendamento-title {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+  }
+
+  .agendamento-status {
+    font-size: 1rem;
+    padding: 8px 16px;
+    border-radius: 20px;
+  }
+
+  .agendamento-details {
+    padding: 25px;
+  }
+
+  .detail-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    font-size: 1rem;
+  }
+
+  .detail-row ion-icon {
+    margin-right: 15px;
+    font-size: 1.2rem;
+    color: #f28cb4;
+  }
+
+  .agendamento-actions {
+    padding: 20px 25px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+  }
+
+  .agendamento-actions ion-button {
+    --border-radius: 10px;
+    height: 45px;
+    font-weight: 600;
+  }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .empty-state ion-icon {
+    font-size: 4rem;
+    color: #ccc;
+    margin-bottom: 20px;
+  }
+
+  .empty-state h2 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: #666;
+  }
+
+  .empty-state p {
+    font-size: 1.1rem;
+    color: #999;
+    line-height: 1.5;
+  }
+
+  .loading {
+    padding: 60px 20px;
+    text-align: center;
+  }
+
+  .loading ion-icon {
+    font-size: 3rem;
+    color: #f28cb4;
+    margin-bottom: 20px;
+    animation: spin 1s linear infinite;
+  }
+
+  .loading p {
+    font-size: 1.2rem;
+    color: #666;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  // Modal de detalhes
+  .modal-content {
+    padding: 30px;
+  }
+
+  .modal-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: #333;
+  }
+
+  .modal-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+  }
+
+  .modal-details h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    color: #9e4a7a;
+  }
+
+  .modal-details p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #666;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 30px;
+  }
+
+  .modal-actions ion-button {
+    --border-radius: 10px;
+    height: 50px;
+    font-weight: 600;
+    min-width: 120px;
+  }
+
+  // Modal de histórico
+  .history-modal-content {
+    padding: 30px;
+  }
+
+  .history-modal-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: #333;
+  }
+
+  .history-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    background: white;
+    transition: all 0.3s ease;
+  }
+
+  .history-item:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  .history-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+  }
+
+  .history-details p {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  .history-details ion-icon {
+    margin-right: 8px;
+    color: #f28cb4;
+  }
+
+  // Estilos para botões de admin/profissional
+  .admin-actions {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 10px;
+    border-left: 4px solid #f28cb4;
+  }
+
+  .admin-actions ion-button {
+    flex: 1;
+    --border-radius: 8px;
+    font-weight: 600;
+  }
+
+  // Estilos para modais de aprovação/rejeição
+  .approval-form, .rejection-form {
+    padding: 20px;
+  }
+
+  .approval-form h3, .rejection-form h3 {
+    color: #9e4a7a;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+  }
+
+  .approval-form p, .rejection-form p {
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group ion-label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+  }
+
+  .form-group ion-textarea {
+    --padding-start: 15px;
+    --padding-end: 15px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    background: white;
+  }
+
+  .form-group ion-textarea:focus-within {
+    border-color: #f28cb4;
+    box-shadow: 0 0 0 3px rgba(242, 140, 180, 0.1);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 25px;
+  }
+
+  .modal-actions ion-button {
+    --border-radius: 10px;
+    height: 45px;
+    font-weight: 600;
+    min-width: 120px;
+  }
+}
+
 .container {
   padding: 20px;
+}
+
+// Estilos para botões de admin/profissional (mobile)
+.admin-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #f28cb4;
+}
+
+.admin-actions ion-button {
+  flex: 1;
+  --border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+// Estilos para modais de aprovação/rejeição (mobile)
+.approval-form, .rejection-form {
+  padding: 15px;
+}
+
+.approval-form h3, .rejection-form h3 {
+  color: #9e4a7a;
+  margin-bottom: 12px;
+  font-size: 1.2rem;
+}
+
+.approval-form p, .rejection-form p {
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.4;
+  font-size: 0.9rem;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group ion-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.form-group ion-textarea {
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: white;
+}
+
+.form-group ion-textarea:focus-within {
+  border-color: #f28cb4;
+  box-shadow: 0 0 0 2px rgba(242, 140, 180, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.modal-actions ion-button {
+  --border-radius: 8px;
+  height: 40px;
+  font-weight: 600;
+  min-width: 100px;
+  font-size: 0.9rem;
 }
 
 .loading {
@@ -253,6 +646,25 @@ ion-content {
     --border-radius: 25px;
     font-weight: 600;
   }
+}
+
+// Estilos para agendamentos expirados
+.expirado-section {
+  margin: 1rem 0;
+}
+
+.expirado-message {
+  background: #f5f5f5;
+  border-left: 4px solid #424242;
+  padding: 12px;
+  border-radius: 4px;
+  color: #424242;
+  font-size: 0.9rem;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-style: italic;
 }
 
 // Responsividade

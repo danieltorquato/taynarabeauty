@@ -1,0 +1,87 @@
+<ion-header [translucent]="true">
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/agendamentos"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Conta Necessária</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="container">
+    <!-- Ícone e mensagem principal -->
+    <div class="main-content">
+      <div class="icon-container">
+        <ion-icon name="person-add-outline" class="main-icon"></ion-icon>
+      </div>
+
+      <h1>Está quase lá!</h1>
+      <p class="main-message">
+        Para que possa agendar seu procedimento, você precisa ter uma conta em nosso sistema.
+      </p>
+
+      <div class="appointment-preview" *ngIf="appointmentData">
+        <h3>Seu agendamento:</h3>
+        <div class="appointment-details">
+          <div class="detail-item">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <span>{{ appointmentData.procedimento }}</span>
+          </div>
+          <div class="detail-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ appointmentData.data }} às {{ appointmentData.hora }}</span>
+          </div>
+          <div class="detail-item" *ngIf="appointmentData.profissional">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>{{ appointmentData.profissional }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opções de ação -->
+    <div class="action-buttons">
+      <ion-button
+        expand="block"
+        size="large"
+        class="action-button register-button"
+        (click)="goToCreateAccount()">
+        <ion-icon name="person-add-outline" slot="start"></ion-icon>
+        Criar Conta
+      </ion-button>
+
+      <ion-button
+        expand="block"
+        size="large"
+        fill="outline"
+        class="action-button login-button"
+        (click)="goToLogin()">
+        <ion-icon name="log-in-outline" slot="start"></ion-icon>
+        Já tenho uma conta
+      </ion-button>
+    </div>
+
+    <!-- Informações adicionais -->
+    <div class="info-section">
+      <h3>Por que preciso de uma conta?</h3>
+      <ul class="benefits-list">
+        <li>
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          <span>Gerenciar seus agendamentos</span>
+        </li>
+        <li>
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          <span>Receber lembretes por WhatsApp</span>
+        </li>
+        <li>
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          <span>Histórico completo de procedimentos</span>
+        </li>
+        <li>
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          <span>Cancelar ou reagendar facilmente</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</ion-content>

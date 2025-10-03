@@ -2,18 +2,18 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem, IonTextarea } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
-import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, closeCircleOutline, informationCircleOutline, schoolOutline, closeOutline, alertCircleOutline } from 'ionicons/icons';
+import { calendarOutline, timeOutline, personOutline, checkmarkCircleOutline, closeCircleOutline, informationCircleOutline, schoolOutline, closeOutline, alertCircleOutline, checkmarkOutline, closeOutline as closeIcon, chatbubbleOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-meus-agendamentos',
   templateUrl: './meus-agendamentos.page.html',
   styleUrls: ['./meus-agendamentos.page.scss'],
   standalone: true,
-  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, CommonModule, FormsModule]
+  imports: [IonLabel, IonSegmentButton, IonIcon, IonButtons, IonBackButton, IonTitle, IonToolbar, IonHeader, IonChip, IonButton, IonCardContent, IonCardHeader, IonCard, IonContent, IonSegment, IonSegmentButton, IonLabel, IonModal, IonList, IonTextarea, CommonModule, FormsModule]
 })
 export class MeusAgendamentosPage implements OnInit {
   agendamentos: any[] = [];
@@ -27,90 +27,158 @@ export class MeusAgendamentosPage implements OnInit {
   showHistoryModal = false;
   historicoAgendamentos: any[] = [];
 
+  // Propriedades para aprovação/rejeição
+  showApprovalModal = false;
+  showRejectionModal = false;
+  selectedAgendamentoForAction: any = null;
+  approvalMessage = '';
+  rejectionMessage = '';
+  isProcessing = false;
+
   constructor(
     public authService: AuthService,
     private api: ApiService,
     private router: Router
   ) {
-    addIcons({timeOutline,calendarOutline,personOutline,informationCircleOutline,closeCircleOutline,closeOutline,alertCircleOutline,checkmarkCircleOutline,schoolOutline});
+    addIcons({timeOutline,calendarOutline,personOutline,informationCircleOutline,closeCircleOutline,closeOutline,alertCircleOutline,checkmarkCircleOutline,schoolOutline,checkmarkOutline,closeIcon,chatbubbleOutline});
   }
 
   ngOnInit() {
+    console.log('=== MEUS AGENDAMENTOS - ngOnInit ===');
+    console.log('AuthService inicializado:', this.authService._initialized);
+    console.log('Usuário atual:', this.authService.currentUser);
+    console.log('Está autenticado:', this.authService.isAuthenticated);
     this.carregarAgendamentos();
   }
 
   carregarAgendamentos() {
+    console.log('=== CARREGANDO AGENDAMENTOS ===');
     this.loading = true;
+    console.log('Loading set to true');
+
     this.api.getMeusAgendamentos().subscribe({
       next: (res) => {
+        console.log('Resposta da API recebida:', res);
         this.loading = false;
+        console.log('Loading set to false');
+
         if (res.success) {
           let agendamentos = res.agendamentos || [];
+          console.log('Agendamentos recebidos:', agendamentos.length);
 
           // Filtrar agendamentos baseado no role do usuário
           const currentUser = this.authService.currentUser;
+          console.log('Usuário atual para filtro:', currentUser);
+
           if (currentUser) {
             if (currentUser.role === 'admin' || currentUser.role === 'recepcao') {
               // Admin e recepção veem todos os agendamentos
               this.agendamentos = agendamentos;
+              console.log('Filtro admin/recepção aplicado:', this.agendamentos.length);
             } else if (currentUser.role === 'profissional') {
               // Profissional vê apenas agendamentos onde ele é responsável
               this.agendamentos = agendamentos.filter((ag: any) =>
                 ag.profissional_id === currentUser.id || ag.profissional_id == currentUser.id
               );
+              console.log('Filtro profissional aplicado:', this.agendamentos.length);
             } else {
               // Cliente vê apenas seus próprios agendamentos
               this.agendamentos = agendamentos;
+              console.log('Filtro cliente aplicado:', this.agendamentos.length);
             }
           } else {
             this.agendamentos = agendamentos;
+            console.log('Sem usuário, usando todos os agendamentos:', this.agendamentos.length);
           }
 
+          console.log('Agendamentos finais:', this.agendamentos);
+          console.log('Chamando separarAgendamentos...');
           // Separar agendamentos ativos dos concluídos
           this.separarAgendamentos();
+          console.log('Chamando filtrarAgendamentos...');
           this.filtrarAgendamentos();
+          console.log('Agendamentos filtrados:', this.agendamentosFiltrados.length);
+        } else {
+          console.log('API retornou success: false');
+          this.agendamentos = [];
+          this.agendamentosAtivos = [];
+          this.agendamentosConcluidos = [];
         }
       },
       error: (err) => {
-        this.loading = false;
         console.error('Erro ao carregar agendamentos:', err);
+        this.loading = false;
+        console.log('Loading set to false devido ao erro');
+
         // Fallback com dados simulados
         this.agendamentos = [];
         this.agendamentosAtivos = [];
         this.agendamentosConcluidos = [];
+        console.log('Arrays resetados devido ao erro');
       }
     });
   }
 
   separarAgendamentos() {
-    const hoje = new Date().toISOString().split('T')[0];
+    console.log('=== SEPARANDO AGENDAMENTOS ===');
+    console.log('Agendamentos para separar:', this.agendamentos.length);
+
+    // Obter data atual no formato YYYY-MM-DD sem problemas de fuso horário
+    const hoje = new Date();
+    const hojeStr = hoje.getFullYear() + '-' +
+                   String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
+                   String(hoje.getDate()).padStart(2, '0');
+
+    console.log('Data atual para separação:', hojeStr);
+
+    // Marcar localmente agendamentos pendentes com data passada como expirados
+    this.agendamentos.forEach(ag => {
+      if (ag.status === 'pendente' && ag.data < hojeStr) {
+        console.log(`Marcando agendamento ${ag.id} como expirado (data: ${ag.data})`);
+        ag.status = 'expirado';
+      }
+    });
 
     this.agendamentosAtivos = this.agendamentos.filter((ag: any) => {
-      // Agendamentos ativos: pendentes, confirmados ou futuros
+      // Agendamentos ativos: pendentes, confirmados com data futura ou hoje
       const statusAtivo = ag.status === 'pendente' || ag.status === 'confirmado';
-      const dataFutura = ag.data >= hoje;
-      return statusAtivo && dataFutura;
+      const dataFuturaOuHoje = ag.data >= hojeStr;
+      return statusAtivo && dataFuturaOuHoje;
     });
 
+    console.log('Agendamentos ativos encontrados:', this.agendamentosAtivos.length);
+
     this.agendamentosConcluidos = this.agendamentos.filter((ag: any) => {
-      // Agendamentos concluídos: rejeitados, cancelados, faltou ou passados
-      const statusConcluido = ag.status === 'rejeitado' || ag.status === 'cancelado' || ag.status === 'faltou';
-      const dataPassada = ag.data < hoje;
+      // Agendamentos concluídos: rejeitados, cancelados, faltou, expirados ou passados
+      const statusConcluido = ag.status === 'rejeitado' || ag.status === 'cancelado' || ag.status === 'faltou' || ag.status === 'expirado';
+      const dataPassada = ag.data < hojeStr;
       return statusConcluido || dataPassada;
     });
+
+    console.log('Agendamentos concluídos encontrados:', this.agendamentosConcluidos.length);
+
+    // Atualizar agendamentos expirados no backend (assíncrono, não bloqueia a UI)
+    this.atualizarAgendamentosExpirados();
   }
 
   filtrarAgendamentos() {
+    console.log('=== FILTRANDO AGENDAMENTOS ===');
+    console.log('Segmento selecionado:', this.selectedSegment);
+    console.log('Agendamentos ativos disponíveis:', this.agendamentosAtivos.length);
+    console.log('Agendamentos totais disponíveis:', this.agendamentos.length);
+
     let agendamentosFiltrados: any[] = [];
 
     if (this.selectedSegment === 'todos') {
       // Na tela principal, mostrar apenas agendamentos ativos
       agendamentosFiltrados = [...this.agendamentosAtivos];
+      console.log('Filtro "todos" aplicado - agendamentos ativos:', agendamentosFiltrados.length);
     } else {
       // Para filtros específicos, usar todos os agendamentos
-      agendamentosFiltrados = this.agendamentos.filter((ag: any) =>
-        ag.status === this.selectedSegment
-      );
+      agendamentosFiltrados = this.agendamentos.filter((ag: any) => {
+        return ag.status === this.selectedSegment;
+      });
+      console.log(`Filtro "${this.selectedSegment}" aplicado:`, agendamentosFiltrados.length);
     }
 
     // Ordenar agendamentos: pendentes primeiro, depois aprovados, depois por data
@@ -137,6 +205,9 @@ export class MeusAgendamentosPage implements OnInit {
       const bDateTime = new Date(b.data + ' ' + b.hora).getTime();
       return bDateTime - aDateTime;
     });
+
+    console.log('Agendamentos filtrados finais:', this.agendamentosFiltrados.length);
+    console.log('Agendamentos filtrados:', this.agendamentosFiltrados);
   }
 
   onSegmentChange() {
@@ -207,6 +278,7 @@ export class MeusAgendamentosPage implements OnInit {
       case 'cancelado': return 'danger';
       case 'rejeitado': return 'danger';
       case 'faltou': return 'danger';
+      case 'expirado': return 'dark';
       default: return 'medium';
     }
   }
@@ -218,20 +290,174 @@ export class MeusAgendamentosPage implements OnInit {
       case 'cancelado': return 'Cancelado';
       case 'rejeitado': return 'Rejeitado';
       case 'faltou': return 'Faltou';
+      case 'expirado': return 'Expirado';
       default: return status;
     }
   }
 
   formatarData(data: string): string {
-    const date = new Date(data);
-    return date.toLocaleDateString('pt-BR');
+    try {
+      if (!data) return '';
+      // Garantir que a data seja interpretada como local, não UTC
+      const [year, month, day] = data.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      return date.toLocaleDateString('pt-BR');
+    } catch (error) {
+      console.error('Erro ao formatar data:', error);
+      return data || '';
+    }
   }
 
   formatarHora(hora: string): string {
-    return hora.substring(0, 5);
+    try {
+      if (!hora) return '';
+      return hora.substring(0, 5);
+    } catch (error) {
+      console.error('Erro ao formatar hora:', error);
+      return hora || '';
+    }
   }
 
   irParaCursos() {
     this.router.navigateByUrl('/cursos');
   }
+
+  // Métodos para verificar roles
+  isAdmin(): boolean {
+    try {
+      return this.authService?.currentUser?.role === 'admin';
+    } catch (error) {
+      console.error('Erro ao verificar se é admin:', error);
+      return false;
+    }
+  }
+
+  isProfissional(): boolean {
+    try {
+      return this.authService?.currentUser?.role === 'profissional';
+    } catch (error) {
+      console.error('Erro ao verificar se é profissional:', error);
+      return false;
+    }
+  }
+
+  canManageAppointments(): boolean {
+    try {
+      return this.isAdmin() || this.isProfissional();
+    } catch (error) {
+      console.error('Erro ao verificar permissões:', error);
+      return false;
+    }
+  }
+
+  // Métodos para aprovação/rejeição
+  abrirModalAprovacao(agendamento: any) {
+    this.selectedAgendamentoForAction = agendamento;
+    this.approvalMessage = '';
+    this.showApprovalModal = true;
+  }
+
+  abrirModalRejeicao(agendamento: any) {
+    this.selectedAgendamentoForAction = agendamento;
+    this.rejectionMessage = '';
+    this.showRejectionModal = true;
+  }
+
+  fecharModais() {
+    this.showApprovalModal = false;
+    this.showRejectionModal = false;
+    this.selectedAgendamentoForAction = null;
+    this.approvalMessage = '';
+    this.rejectionMessage = '';
+  }
+
+  aprovarAgendamento() {
+    if (!this.selectedAgendamentoForAction) return;
+
+    this.isProcessing = true;
+    const agendamentoId = this.selectedAgendamentoForAction.id;
+    const dados = {
+      status: 'confirmado',
+      mensagem: this.approvalMessage || undefined
+    };
+
+    this.api.updateAgendamentoStatus(agendamentoId, dados).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        if (res.success) {
+          // Atualizar o agendamento na lista
+          const index = this.agendamentos.findIndex(a => a.id === agendamentoId);
+          if (index !== -1) {
+            this.agendamentos[index].status = 'confirmado';
+            this.agendamentos[index].mensagem_aprovacao = this.approvalMessage;
+          }
+          this.filtrarAgendamentos();
+          this.fecharModais();
+          console.log('Agendamento aprovado com sucesso');
+        } else {
+          console.error('Erro ao aprovar agendamento:', res.message);
+        }
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Erro ao aprovar agendamento:', err);
+      }
+    });
+  }
+
+  rejeitarAgendamento() {
+    if (!this.selectedAgendamentoForAction) return;
+
+    this.isProcessing = true;
+    const agendamentoId = this.selectedAgendamentoForAction.id;
+    const dados = {
+      status: 'rejeitado',
+      mensagem: this.rejectionMessage || undefined
+    };
+
+    this.api.updateAgendamentoStatus(agendamentoId, dados).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        if (res.success) {
+          // Atualizar o agendamento na lista
+          const index = this.agendamentos.findIndex(a => a.id === agendamentoId);
+          if (index !== -1) {
+            this.agendamentos[index].status = 'rejeitado';
+            this.agendamentos[index].motivo_rejeicao = this.rejectionMessage;
+          }
+          this.filtrarAgendamentos();
+          this.fecharModais();
+          console.log('Agendamento rejeitado com sucesso');
+        } else {
+          console.error('Erro ao rejeitar agendamento:', res.message);
+        }
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Erro ao rejeitar agendamento:', err);
+      }
+    });
+  }
+
+  atualizarAgendamentosExpirados() {
+    this.api.atualizarAgendamentosExpirados().subscribe({
+      next: (res) => {
+        if (res.success && res.count > 0) {
+          console.log(`${res.count} agendamentos expirados atualizados no backend`);
+        }
+      },
+      error: (err) => {
+        console.error('Erro ao atualizar agendamentos expirados:', err);
+        // Mesmo com erro, continuar com a lógica local
+      }
+    });
+  }
+
+  private getTodayString(): string {
+    const hoje = new Date();
+    return hoje.getFullYear() + '-' +
+           String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
+           String(hoje.getDate()).padStart(2, '0');
+  }
+
 }

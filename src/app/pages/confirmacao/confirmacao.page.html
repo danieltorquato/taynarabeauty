@@ -1,8 +1,13 @@
 <ion-content>
   <div class="wrap">
     <div class="card">
-      <h1>Pedido recebido!</h1>
-      <p>Obrigado, {{ nome }}. Recebemos sua solicitação de agendamento.</p>
+      <h1 *ngIf="!automaticConfirmation">Pedido recebido!</h1>
+      <h1 *ngIf="automaticConfirmation && !accountCreated">Agendamento confirmado!</h1>
+      <h1 *ngIf="automaticConfirmation && accountCreated">Conta criada e agendamento confirmado!</h1>
+
+      <p *ngIf="!automaticConfirmation">Obrigado, {{ nome }}. Recebemos sua solicitação de agendamento.</p>
+      <p *ngIf="automaticConfirmation && !accountCreated">Obrigado, {{ nome }}. Seu agendamento foi confirmado automaticamente após o login!</p>
+      <p *ngIf="automaticConfirmation && accountCreated">Parabéns! Sua conta foi criada e seu agendamento foi confirmado automaticamente!</p>
 
       <div class="summary">
         <div><strong>Serviço:</strong> {{ servico }}</div>

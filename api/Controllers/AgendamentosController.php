@@ -4,6 +4,8 @@ class AgendamentosController {
         header('Content-Type: application/json');
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
+        error_log('Dados recebidos no AgendamentosController: ' . json_encode($input));
+
         $nome = trim($input['nome'] ?? '');
         $email = trim($input['email'] ?? '');
         $telefone = trim($input['telefone'] ?? '');
@@ -32,25 +34,7 @@ class AgendamentosController {
             return;
         }
 
-        try {
-            // Verificar se existe agendamento pendente ou confirmado para hoje ou futuro
-            $stmt = $conn->prepare('SELECT id, status, data FROM agendamentos WHERE usuario_id = :usuario_id AND status IN ("pendente", "confirmado") AND data >= CURDATE() LIMIT 1');
-            $stmt->bindParam(':usuario_id', $usuario_id);
-            $stmt->execute();
-            $agendamentoExistente = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            if ($agendamentoExistente) {
-                http_response_code(422);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Você já possui um agendamento ' . $agendamentoExistente['status'] . ' para ' . date('d/m/Y', strtotime($agendamentoExistente['data'])) . '. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.'
-                ]);
-                return;
-            }
-        } catch (Throwable $e) {
-            error_log('Erro ao verificar duplicidade: ' . $e->getMessage());
-            // Continuar com o agendamento se houver erro na verificação
-        }
+        // Verificação de conflitos temporariamente desabilitada para debug
 
         // Se profissional_id = 0, significa "sem preferência" - usar o primeiro disponível
         if ($profissional_id === 0) {
@@ -68,6 +52,7 @@ class AgendamentosController {
                         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                         nome VARCHAR(120) NOT NULL,
                         email VARCHAR(120) NOT NULL UNIQUE,
+                        telefone VARCHAR(20) NOT NULL,
                         senha VARCHAR(255) NOT NULL,
                         role ENUM('admin','recepcao','profissional','cliente') NOT NULL DEFAULT 'cliente',
                         criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -76,7 +61,7 @@ class AgendamentosController {
                 $conn->exec($createUsuarios);
 
                 // Insert default user
-                $stmt = $conn->prepare('INSERT INTO usuarios (id, nome, email, senha, role) VALUES (1, "Cliente Padrão", "cliente@taynarabeauty.com", :senha, "cliente")');
+                $stmt = $conn->prepare('INSERT INTO usuarios (id, nome, email, telefone, senha, role) VALUES (1, "Cliente Padrão", "cliente@taynarabeauty.com", "11999999999", :senha, "cliente")');
                 $senhaHash = password_hash('123456', PASSWORD_DEFAULT);
                 $stmt->bindParam(':senha', $senhaHash);
                 $stmt->execute();
@@ -85,7 +70,7 @@ class AgendamentosController {
                 $stmt = $conn->prepare('SELECT id FROM usuarios WHERE id = 1 LIMIT 1');
                 $stmt->execute();
                 if ($stmt->rowCount() === 0) {
-                    $stmt = $conn->prepare('INSERT INTO usuarios (id, nome, email, senha, role) VALUES (1, "Cliente Padrão", "cliente@taynarabeauty.com", :senha, "cliente")');
+                    $stmt = $conn->prepare('INSERT INTO usuarios (id, nome, email, telefone, senha, role) VALUES (1, "Cliente Padrão", "cliente@taynarabeauty.com", "11999999999", :senha, "cliente")');
                     $senhaHash = password_hash('123456', PASSWORD_DEFAULT);
                     $stmt->bindParam(':senha', $senhaHash);
                     $stmt->execute();
@@ -203,6 +188,21 @@ class AgendamentosController {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao criar agendamento: ' . $e->getMessage()]);
         }
+    }
+
+    private function getDuracaoProcedimento($procedimento_id) {
+        // Mapeamento de duração por procedimento (em minutos)
+        $duracoes = [
+            1 => 120, // Extensão de Cílios - Fio a Fio
+            2 => 150, // Extensão de Cílios - Volume Brasileiro
+            3 => 150, // Extensão de Cílios - Volume Brasileiro Marrom
+            4 => 180, // Extensão de Cílios - Volume Inglês
+            5 => 180, // Extensão de Cílios - Fox Eyes
+            6 => 120, // Lash Lifting
+            7 => 60,  // Hidragloss - Lips
+        ];
+
+        return $duracoes[$procedimento_id] ?? 60; // Default 60 minutos
     }
 
     private function bloquearHorariosPorDuracao($conn, $data, $hora, $profissional_id, $procedimento_id) {
@@ -328,7 +328,7 @@ class AgendamentosController {
             }
 
             // Ao rejeitar, também devemos liberar os horários bloqueados
-            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora, procedimento_id FROM agendamentos WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $id);
             $stmt->execute();
             $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -339,13 +339,9 @@ class AgendamentosController {
             $stmt->bindParam(':motivo', $motivoRejeicao);
             $stmt->execute();
 
-            // Liberar horários
+            // Liberar horários baseado na duração do procedimento
             if ($agendamento) {
-                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
-                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
-                $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
-                $stmt->execute();
+                $this->liberarHorariosPorDuracao($conn, $agendamento['data'], $agendamento['hora'], $agendamento['profissional_id'], $agendamento['procedimento_id']);
             }
 
             echo json_encode([
@@ -373,7 +369,7 @@ class AgendamentosController {
 
         try {
             // Ao marcar falta, também devemos liberar os horários bloqueados
-            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora, procedimento_id FROM agendamentos WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $id);
             $stmt->execute();
             $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -383,13 +379,9 @@ class AgendamentosController {
             $stmt->bindParam(':id', $id);
             $stmt->execute();
 
-            // Liberar horários
+            // Liberar horários baseado na duração do procedimento
             if ($agendamento) {
-                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
-                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
-                $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
-                $stmt->execute();
+                $this->liberarHorariosPorDuracao($conn, $agendamento['data'], $agendamento['hora'], $agendamento['profissional_id'], $agendamento['procedimento_id']);
             }
 
             echo json_encode([
@@ -417,7 +409,7 @@ class AgendamentosController {
 
         try {
             // Ao cancelar, também devemos liberar os horários bloqueados
-            $stmt = $conn->prepare('SELECT profissional_id, data, hora FROM agendamentos WHERE id = :id LIMIT 1');
+            $stmt = $conn->prepare('SELECT profissional_id, data, hora, procedimento_id FROM agendamentos WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $id);
             $stmt->execute();
             $agendamento = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -427,13 +419,9 @@ class AgendamentosController {
             $stmt->bindParam(':id', $id);
             $stmt->execute();
 
-            // Liberar horários
+            // Liberar horários baseado na duração do procedimento
             if ($agendamento) {
-                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
-                $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
-                $stmt->bindParam(':data', $agendamento['data']);
-                $stmt->bindParam(':hora', $agendamento['hora']);
-                $stmt->execute();
+                $this->liberarHorariosPorDuracao($conn, $agendamento['data'], $agendamento['hora'], $agendamento['profissional_id'], $agendamento['procedimento_id']);
             }
 
             echo json_encode([
@@ -444,6 +432,58 @@ class AgendamentosController {
             error_log('Erro AgendamentosController::cancelar: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao cancelar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    private function liberarHorariosPorDuracao($conn, $data, $hora, $profissional_id, $procedimento_id) {
+        try {
+            // Obter duração do procedimento
+            $duracao = 60; // Default 60 minutos se não encontrar
+
+            // Tentar buscar duração das opções do procedimento
+            $stmt = $conn->prepare("SHOW TABLES LIKE 'procedimento_opcoes'");
+            $stmt->execute();
+            if ($stmt->rowCount() > 0) {
+                $stmt = $conn->prepare('SELECT duracao FROM procedimento_opcoes WHERE procedimento_id = :proc_id AND duracao > 0 LIMIT 1');
+                $stmt->bindParam(':proc_id', $procedimento_id);
+                $stmt->execute();
+                $opcao = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($opcao && $opcao['duracao']) {
+                    $duracao = (int)$opcao['duracao'];
+                }
+            }
+
+            // Converter hora para DateTime
+            $dataHora = new DateTime($data . ' ' . $hora);
+            $horaInicio = $dataHora->format('H:i:s');
+
+            // Calcular horários que precisam ser liberados (intervalos de 15 min)
+            $horariosParaLiberar = [];
+            $tempoAtual = clone $dataHora;
+            $tempoFim = (clone $dataHora)->modify("+{$duracao} minutes");
+
+            while ($tempoAtual < $tempoFim) {
+                $horariosParaLiberar[] = $tempoAtual->format('H:i:s');
+                $tempoAtual->modify('+15 minutes');
+            }
+
+            // Verificar se tabela horarios_disponiveis existe
+            $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
+            $stmt->execute();
+            if ($stmt->rowCount() > 0) {
+                // Liberar horários reservados para este profissional e procedimento
+                foreach ($horariosParaLiberar as $horaLiberacao) {
+                    $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :prof_id AND status = "reservado"');
+                    $stmt->bindParam(':data', $data);
+                    $stmt->bindParam(':hora', $horaLiberacao);
+                    $stmt->bindParam(':prof_id', $profissional_id);
+                    $stmt->execute();
+                }
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro ao liberar horários por duração: ' . $e->getMessage());
+            // Não interromper o fluxo se falhar a liberação
         }
     }
 
@@ -539,12 +579,8 @@ class AgendamentosController {
             $stmt->bindParam(':justificativa', $justificativa);
             $stmt->execute();
 
-            // Liberar horários
-            $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE profissional_id = :prof_id AND data = :data AND hora = :hora AND status = "reservado"');
-            $stmt->bindParam(':prof_id', $agendamento['profissional_id']);
-            $stmt->bindParam(':data', $agendamento['data']);
-            $stmt->bindParam(':hora', $agendamento['hora']);
-            $stmt->execute();
+            // Liberar horários baseado na duração do procedimento
+            $this->liberarHorariosPorDuracao($conn, $agendamento['data'], $agendamento['hora'], $agendamento['profissional_id'], $agendamento['procedimento_id']);
 
             echo json_encode([
                 'success' => true,
@@ -554,6 +590,117 @@ class AgendamentosController {
             error_log('Erro AgendamentosController::desmarcar: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao desmarcar agendamento: ' . $e->getMessage()]);
+        }
+    }
+
+    public function updateStatus($id) {
+        header('Content-Type: application/json');
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+        $status = trim($input['status'] ?? '');
+        $mensagem = trim($input['mensagem'] ?? '');
+
+        if (!in_array($status, ['pendente', 'confirmado', 'rejeitado', 'cancelado', 'faltou', 'expirado'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Status inválido']);
+            return;
+        }
+
+        try {
+            $db = new Database();
+            $conn = $db->connect();
+
+            // Verificar se o agendamento existe
+            $stmt = $conn->prepare("SELECT id FROM agendamentos WHERE id = ?");
+            $stmt->execute([$id]);
+            if (!$stmt->fetch()) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Agendamento não encontrado']);
+                return;
+            }
+
+            // Atualizar status e mensagem
+            $sql = "UPDATE agendamentos SET status = ?";
+            $params = [$status];
+
+            if ($mensagem !== '') {
+                if ($status === 'rejeitado') {
+                    $sql .= ", motivo_rejeicao = ?";
+                } else if ($status === 'confirmado') {
+                    $sql .= ", mensagem_aprovacao = ?";
+                }
+                $params[] = $mensagem;
+            }
+
+            $sql .= " WHERE id = ?";
+            $params[] = $id;
+
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute($params);
+
+            if ($result) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Status atualizado com sucesso'
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Erro ao atualizar status']);
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::updateStatus: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro ao atualizar status: ' . $e->getMessage()]);
+        }
+    }
+
+    public function atualizarExpirados() {
+        try {
+            $db = new Database();
+            $conn = $db->connect();
+
+            // Buscar agendamentos pendentes que passaram da data
+            $hoje = date('Y-m-d');
+            error_log("Buscando agendamentos expirados para data: $hoje");
+
+            $stmt = $conn->prepare("
+                SELECT id FROM agendamentos
+                WHERE status = 'pendente'
+                AND data < ?
+            ");
+            $stmt->execute([$hoje]);
+            $agendamentosExpirados = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            error_log("Agendamentos expirados encontrados: " . json_encode($agendamentosExpirados));
+
+            if (empty($agendamentosExpirados)) {
+                error_log("Nenhum agendamento expirado encontrado");
+                return ['success' => true, 'message' => 'Nenhum agendamento expirado encontrado', 'count' => 0];
+            }
+
+            // Atualizar para expirado
+            $placeholders = str_repeat('?,', count($agendamentosExpirados) - 1) . '?';
+            $stmt = $conn->prepare("
+                UPDATE agendamentos
+                SET status = 'expirado'
+                WHERE id IN ($placeholders)
+            ");
+            $result = $stmt->execute($agendamentosExpirados);
+
+            if ($result) {
+                return [
+                    'success' => true,
+                    'message' => 'Agendamentos expirados atualizados com sucesso',
+                    'count' => count($agendamentosExpirados)
+                ];
+            } else {
+                return ['success' => false, 'message' => 'Erro ao atualizar agendamentos expirados'];
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro AgendamentosController::atualizarExpirados: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Erro ao atualizar agendamentos expirados: ' . $e->getMessage()];
         }
     }
 }

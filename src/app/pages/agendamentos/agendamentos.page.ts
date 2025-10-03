@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { addIcons } from 'ionicons';
 import { calendarOutline, personOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
 
@@ -13,7 +14,7 @@ import { calendarOutline, personOutline, informationCircleOutline, timeOutline }
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
-  imports: [IonCardContent, IonCard, IonSegmentButton, IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, IonSegment, IonSegmentButton, IonCard, IonCardContent, CommonModule, FormsModule]
+  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
   procedimentos: any[] = [];
@@ -50,7 +51,7 @@ export class AgendamentoPage implements OnInit {
   selectedSegment = 'todos';
 
 
-  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute) {
+  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService) {
     // Registrar ícones
     addIcons({informationCircleOutline,calendarOutline,timeOutline,personOutline});
   }
@@ -93,8 +94,13 @@ export class AgendamentoPage implements OnInit {
     // Load professionals
     this.loadProfissionais();
 
-    // Load user appointments to check for duplicates
-    this.loadMeusAgendamentos();
+    // Load user appointments to check for duplicates (only if logged in)
+    if (this.authService.isAuthenticated) {
+      this.loadMeusAgendamentos();
+    }
+
+    // Restaurar dados temporários se existirem (usuário retornou do login)
+    this.restoreTemporaryAppointmentData();
   }
 
   private loadProfissionais(procedimentoId?: number) {
@@ -141,6 +147,15 @@ export class AgendamentoPage implements OnInit {
     });
   }
 
+  getActiveAppointmentsForToday(): any[] {
+    const today = new Date().toISOString().split('T')[0];
+    return this.meusAgendamentos.filter(agendamento => {
+      const agendamentoData = agendamento.data;
+      const status = agendamento.status;
+      return (status === 'pendente' || status === 'confirmado') && agendamentoData === today;
+    });
+  }
+
   filtrarMeusAgendamentos() {
     if (this.selectedSegment === 'todos') {
       this.meusAgendamentosFiltrados = this.meusAgendamentos;
@@ -157,6 +172,53 @@ export class AgendamentoPage implements OnInit {
 
   navigateToMeusAgendamentos() {
     this.router.navigateByUrl('/meus-agendamentos');
+  }
+
+  private saveTemporaryAppointmentData() {
+    const appointmentData = {
+      selectedProcedimento: this.selectedProcedimento,
+      selectedProfissional: this.selectedProfissional,
+      selectedDate: this.selectedDate,
+      selectedTime: this.selectedTime,
+      tipoCilios: this.tipoCilios,
+      corCilios: this.corCilios,
+      corLabios: this.corLabios,
+      note: this.note
+    };
+    localStorage.setItem('tempAppointmentData', JSON.stringify(appointmentData));
+  }
+
+  private restoreTemporaryAppointmentData() {
+    const savedData = localStorage.getItem('tempAppointmentData');
+    if (savedData) {
+      try {
+        const appointmentData = JSON.parse(savedData);
+        this.selectedProcedimento = appointmentData.selectedProcedimento || 0;
+        this.selectedProfissional = appointmentData.selectedProfissional || 0;
+        this.selectedDate = appointmentData.selectedDate || '';
+        this.selectedTime = appointmentData.selectedTime || '';
+        this.tipoCilios = appointmentData.tipoCilios || '';
+        this.corCilios = appointmentData.corCilios || '';
+        this.corLabios = appointmentData.corLabios || '';
+        this.note = appointmentData.note || '';
+
+        // Recalcular preço e duração
+        this.calculatePriceAndDuration();
+
+        // Recarregar horários se data foi selecionada
+        if (this.selectedDate) {
+          this.onDateChange();
+        }
+
+        // Limpar dados temporários
+        localStorage.removeItem('tempAppointmentData');
+
+        // Carregar agendamentos do usuário após login
+        this.loadMeusAgendamentos();
+      } catch (error) {
+        console.error('Erro ao restaurar dados temporários:', error);
+      }
+    }
   }
 
   getStatusColor(status: string): string {
@@ -528,11 +590,21 @@ export class AgendamentoPage implements OnInit {
       return;
     }
 
-    // Verificar se já existe agendamento ativo
-    if (this.hasActiveAppointment) {
-      alert('Você já possui um agendamento pendente ou confirmado. Não é possível fazer um novo agendamento até que o atual seja concluído ou cancelado.');
+    // Verificar se o usuário está logado
+    if (!this.authService.isAuthenticated) {
+      // Salvar dados do agendamento temporariamente
+      this.saveTemporaryAppointmentData();
+      // Redirecionar para página de aviso
+      this.router.navigate(['/agendamento-aviso']);
       return;
     }
+
+    // Se chegou até aqui, o usuário está logado, continuar com o agendamento
+    this.proceedWithAppointment();
+  }
+
+  private proceedWithAppointment() {
+    // A verificação de conflitos de horário agora é feita pelo backend
 
     const dateIso = this.selectedDate;
     const date = dateIso ? dateIso.slice(0, 10) : '';

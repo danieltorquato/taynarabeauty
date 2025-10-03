@@ -28,9 +28,7 @@ export const routes: Routes = [
   },
   {
     path: 'agendamentos',
-    loadComponent: () => import('./pages/agendamentos/agendamentos.page').then( m => m.AgendamentoPage),
-    canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['admin', 'recepcao', 'profissional', 'cliente'] }
+    loadComponent: () => import('./pages/agendamentos/agendamentos.page').then( m => m.AgendamentoPage)
   },
   {
     path: 'dashboard-admin',
@@ -70,5 +68,13 @@ export const routes: Routes = [
     path: 'procedimento-detalhes/:id',
     loadComponent: () => import('./pages/procedimento-detalhes/procedimento-detalhes.page').then( m => m.ProcedimentoDetalhesPage),
     canActivate: [AuthGuard]
+  },
+  {
+    path: 'agendamento-aviso',
+    loadComponent: () => import('./pages/agendamento-aviso/agendamento-aviso.page').then( m => m.AgendamentoAvisoPage)
+  },
+  {
+    path: 'criar-conta',
+    loadComponent: () => import('./pages/criar-conta/criar-conta.page').then( m => m.CriarContaPage)
   },
 ];

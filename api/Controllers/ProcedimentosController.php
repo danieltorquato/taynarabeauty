@@ -74,14 +74,9 @@ class ProcedimentosController {
             } else {
                 // Create demo data based on your price table
                 $procedimentos = [
-                    ['id' => 1, 'nome' => 'Fio a Fio - Rímel', 'categoria' => 'cilios'],
-                    ['id' => 2, 'nome' => 'Volume Brasileiro', 'categoria' => 'cilios'],
-                    ['id' => 3, 'nome' => 'Volume Brasileiro Marrom', 'categoria' => 'cilios'],
-                    ['id' => 4, 'nome' => 'Volume Inglês', 'categoria' => 'cilios'],
-                    ['id' => 5, 'nome' => 'Fox Eyes - Raposinha', 'categoria' => 'cilios'],
-                    ['id' => 6, 'nome' => 'Lash Lifting', 'categoria' => 'cilios'],
-                    ['id' => 7, 'nome' => 'Hidragloss - Lips', 'categoria' => 'labios'],
-                    ['id' => 8, 'nome' => 'Combo Completo', 'categoria' => 'combo']
+                    ['id' => 3, 'nome' => 'Cílios', 'categoria' => 'cilios'],
+                    ['id' => 4, 'nome' => 'Lábios', 'categoria' => 'labios'],
+                    ['id' => 5, 'nome' => 'Combo (Cílios + Lábios)', 'categoria' => 'labios']
                 ];
                 $opcoesPorProcedimento = [
                     1 => [

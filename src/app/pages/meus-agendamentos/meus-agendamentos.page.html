@@ -9,6 +9,16 @@
 
 <ion-content>
   <div class="container">
+    <!-- DEBUG INFO -->
+    <div style="background: yellow; padding: 10px; margin: 10px; border: 2px solid red;">
+      <h3>DEBUG INFO:</h3>
+      <p>Loading: {{ loading }}</p>
+      <p>Agendamentos: {{ agendamentos.length }}</p>
+      <p>Agendamentos Ativos: {{ agendamentosAtivos.length }}</p>
+      <p>Agendamentos Filtrados: {{ agendamentosFiltrados.length }}</p>
+      <p>Selected Segment: {{ selectedSegment }}</p>
+    </div>
+
     <div *ngIf="loading" class="loading">
       <ion-icon name="time-outline"></ion-icon>
       <p>Carregando agendamentos...</p>
@@ -92,7 +102,15 @@
             </p>
           </div>
 
-          <div class="agendamento-actions" *ngIf="agendamento.status !== 'rejeitado'">
+          <!-- Aviso para agendamentos expirados -->
+          <div *ngIf="agendamento.status === 'expirado'" class="expirado-section">
+            <p class="expirado-message">
+              <ion-icon name="time-outline"></ion-icon>
+              <strong>Este agendamento expirou</strong> - A data do agendamento já passou e não foi confirmado a tempo.
+            </p>
+          </div>
+
+          <div class="agendamento-actions" *ngIf="agendamento.status !== 'rejeitado' && agendamento.status !== 'expirado'">
             <ion-button
               fill="clear"
               size="small"
@@ -100,6 +118,27 @@
               <ion-icon name="information-circle-outline" slot="start"></ion-icon>
               Ver Detalhes
             </ion-button>
+
+            <!-- Botões para admin/profissional gerenciarem agendamentos pendentes -->
+            <div *ngIf="canManageAppointments() && agendamento.status === 'pendente'" class="admin-actions">
+              <ion-button
+                fill="clear"
+                color="success"
+                size="small"
+                (click)="abrirModalAprovacao(agendamento)">
+                <ion-icon name="checkmark-outline" slot="start"></ion-icon>
+                Aprovar
+              </ion-button>
+
+              <ion-button
+                fill="clear"
+                color="danger"
+                size="small"
+                (click)="abrirModalRejeicao(agendamento)">
+                <ion-icon name="close-outline" slot="start"></ion-icon>
+                Rejeitar
+              </ion-button>
+            </div>
 
             <ion-button
               *ngIf="agendamento.status !== 'cancelado'"
@@ -213,6 +252,94 @@
             </ion-card-content>
           </ion-card>
         </ion-list>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal de Aprovação -->
+  <ion-modal [isOpen]="showApprovalModal" (didDismiss)="fecharModais()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Aprovar Agendamento</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="fecharModais()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-content">
+        <div class="approval-form">
+          <h3>Confirmar Aprovação</h3>
+          <p>Você está prestes a aprovar o agendamento de <strong>{{ selectedAgendamentoForAction?.procedimento_nome }}</strong>.</p>
+
+          <div class="form-group">
+            <ion-label position="stacked">Mensagem de aprovação (opcional)</ion-label>
+            <ion-textarea
+              [(ngModel)]="approvalMessage"
+              placeholder="Digite uma mensagem para o cliente..."
+              rows="3">
+            </ion-textarea>
+          </div>
+
+          <div class="modal-actions">
+            <ion-button fill="outline" (click)="fecharModais()" [disabled]="isProcessing">
+              Cancelar
+            </ion-button>
+            <ion-button
+              color="success"
+              (click)="aprovarAgendamento()"
+              [disabled]="isProcessing">
+              <ion-icon name="checkmark-outline" slot="start"></ion-icon>
+              {{ isProcessing ? 'Aprovando...' : 'Aprovar' }}
+            </ion-button>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal de Rejeição -->
+  <ion-modal [isOpen]="showRejectionModal" (didDismiss)="fecharModais()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Rejeitar Agendamento</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="fecharModais()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-content">
+        <div class="rejection-form">
+          <h3>Confirmar Rejeição</h3>
+          <p>Você está prestes a rejeitar o agendamento de <strong>{{ selectedAgendamentoForAction?.procedimento_nome }}</strong>.</p>
+
+          <div class="form-group">
+            <ion-label position="stacked">Motivo da rejeição (opcional)</ion-label>
+            <ion-textarea
+              [(ngModel)]="rejectionMessage"
+              placeholder="Digite o motivo da rejeição..."
+              rows="3">
+            </ion-textarea>
+          </div>
+
+          <div class="modal-actions">
+            <ion-button fill="outline" (click)="fecharModais()" [disabled]="isProcessing">
+              Cancelar
+            </ion-button>
+            <ion-button
+              color="danger"
+              (click)="rejeitarAgendamento()"
+              [disabled]="isProcessing">
+              <ion-icon name="close-outline" slot="start"></ion-icon>
+              {{ isProcessing ? 'Rejeitando...' : 'Rejeitar' }}
+            </ion-button>
+          </div>
+        </div>
       </ion-content>
     </ng-template>
   </ion-modal>

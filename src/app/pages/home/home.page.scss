@@ -3,44 +3,98 @@ ion-content {
   font-family: 'Poppins', sans-serif;
 }
 
+// Breakpoints para desktop
+@media (min-width: 768px) {
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .main-header {
+    padding: 20px 0;
+    margin-bottom: 30px;
+  }
+
+  .user-header, .brand-header {
+    padding: 30px;
+    border-radius: 20px;
+  }
+
+  .user-photo, .brand-photo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .profile-info h1 {
+    font-size: 2.5rem;
+  }
+
+  .profile-info p {
+    font-size: 1.2rem;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin: 40px 0;
+  }
+
+  .custom-card {
+    margin: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .custom-card ion-card-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .img-card {
+    height: 200px;
+    object-fit: cover;
+  }
+
+  .card-title {
+    font-size: 1.3rem;
+    margin: 15px 0 10px 0;
+  }
+
+  .card-description {
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .price {
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+  }
+
+  .duration {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  .book-button {
+    width: 100%;
+    height: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
 .title {
   font-weight: 700;
   color: #9e4a7a;
   font-size: 1.4rem;
 }
 
-.banner {
-  text-align: center;
-  padding: 25px;
-  margin-bottom: -5%;
-}
-
-.logo {
-  width: 25%;
-  margin: 0 auto 0px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.25);
-  transition: transform 0.3s ease;
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
-.banner h1 {
-  font-size: 2rem;
-  margin-top: 15px;
-  color: #f28cb4;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
-}
-
-.banner p {
-  color: #333;
-  font-size: 1.1rem;
-}
 
 .custom-card {
   border-radius: 20px;
@@ -77,32 +131,149 @@ ion-card-content {
   color: #333;
 }
 
-// Header do usuário
+// Header para usuários logados - foco no perfil do usuário
 .user-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #f28cb4, #e8a0c7);
-  margin-bottom: 10px;
-  border-radius: 0 0 20px 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  background: linear-gradient(135deg, #9e4a7a, #b85a8a);
+  margin-bottom: 20px;
+  border-radius: 0 0 25px 25px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-.user-info {
+// Header para usuários não logados - foco na marca Taynara
+.brand-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #f28cb4, #e8a0c7);
+  margin-bottom: 20px;
+  border-radius: 0 0 25px 25px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+// Avatar do usuário logado
+.user-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+
+  .avatar-initial {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.user-photo:hover {
+  transform: scale(1.05);
+}
+
+// Foto da marca Taynara (usuários não logados)
+.brand-photo {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+
+.brand-photo:hover {
+  transform: scale(1.05);
+}
+
+.profile-info {
   display: flex;
   flex-direction: column;
   color: #333;
 
-  span:first-child {
-    font-weight: 600;
-    font-size: 1.1rem;
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 5px 0;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
   }
 
-  .user-role {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    text-transform: capitalize;
+  p {
+    font-size: 1rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 3px 0;
+  }
+
+  .welcome-text {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .brand-subtitle {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 400;
+    font-style: italic;
+  }
+}
+
+.logout-btn, .login-btn {
+  --color: #fff;
+  --background: rgba(255, 255, 255, 0.2);
+  --border-radius: 20px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    --background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
+
+  ion-icon {
+    margin-right: 5px;
+    font-size: 1.1rem;
+  }
+}
+
+.login-btn {
+  --color: #f28cb4;
+  --background: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+
+  &:hover {
+    --background: #fff;
+    transform: translateY(-2px);
   }
 }
 
@@ -146,23 +317,6 @@ ion-card-content {
   }
 }
 
-// Seção de login
-.login-section {
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.login-card {
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-
-  h2 {
-    color: #9e4a7a;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-}
 
 // Menu administrativo
 .section-title {

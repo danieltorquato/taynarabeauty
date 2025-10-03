@@ -8,3 +8,96 @@ h1 { margin:0 0 6px 0; color:#f28cb4; font-size:22px; }
 .btn--wa { background:#25d366; color:#fff; }
 .hint { margin-top:10px; font-size:12px; color:#6b5b6b; }
 
+// Breakpoints para desktop
+@media (min-width: 768px) {
+  .wrap {
+    padding: 40px;
+  }
+
+  .card {
+    max-width: 700px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 30px 0;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 15px;
+  }
+
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .summary-item h3 {
+    font-size: 1.2rem;
+    color: #9e4a7a;
+    margin-bottom: 10px;
+  }
+
+  .summary-item p {
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 600;
+  }
+
+  .actions {
+    justify-content: center;
+    margin-top: 30px;
+  }
+
+  .btn {
+    padding: 15px 25px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 150px;
+    text-align: center;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn--wa:hover {
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4);
+  }
+
+  .hint {
+    margin-top: 20px;
+    font-size: 1rem;
+    text-align: center;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: 10px;
+    color: #1976d2;
+  }
+
+  .success-icon {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .success-icon ion-icon {
+    font-size: 4rem;
+    color: #4caf50;
+  }
+}
+

@@ -11,8 +11,17 @@ import { NotificationBadgeComponent } from './components/notification-badge/noti
 export class AppComponent implements OnInit {
   constructor(private authService: AuthService) {}
 
-  ngOnInit() {
-    // Inicializar o serviço de autenticação
-    // Isso garante que o estado de autenticação seja carregado na inicialização
+  async ngOnInit() {
+    // Aguardar a inicialização do AuthService
+    console.log('AppComponent - Aguardando inicialização do AuthService...');
+
+    // Aguardar até que o AuthService esteja inicializado
+    while (!this.authService._initialized) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+
+    console.log('AppComponent - AuthService inicializado');
+    console.log('AppComponent - Usuário atual:', this.authService.currentUser);
+    console.log('AppComponent - Está autenticado:', this.authService.isAuthenticated);
   }
 }

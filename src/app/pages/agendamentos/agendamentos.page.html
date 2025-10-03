@@ -9,29 +9,37 @@
 
 <ion-content [fullscreen]="true">
   <div class="wrapper">
-    <!-- Aviso de agendamento ativo -->
-    <div *ngIf="hasActiveAppointment" class="active-appointment-warning">
+    <div class="form-container">
+    <!-- Aviso de agendamento ativo (apenas para usuários logados) -->
+    <div *ngIf="hasActiveAppointment && authService.isAuthenticated" class="active-appointment-info">
       <ion-icon name="information-circle-outline"></ion-icon>
-      <div class="warning-content">
-        <h3>Você já possui um agendamento ativo</h3>
-        <p>Você não pode fazer um novo agendamento enquanto tiver um agendamento pendente ou confirmado.</p>
+      <div class="info-content">
+        <h3>Você já possui agendamentos ativos</h3>
+        <p>Você pode agendar procedimentos diferentes no mesmo dia, desde que não haja conflito de horários.</p>
+        <div *ngIf="getActiveAppointmentsForToday().length > 0" class="today-appointments">
+          <p><strong>Agendamentos de hoje:</strong></p>
+          <div *ngFor="let agendamento of getActiveAppointmentsForToday()" class="appointment-item">
+            <span>{{ agendamento.procedimento_nome }} - {{ agendamento.hora }}</span>
+          </div>
+        </div>
         <ion-button fill="outline" size="small" (click)="navigateToMeusAgendamentos()">
-          Ver meus agendamentos
+          Ver todos os agendamentos
         </ion-button>
       </div>
     </div>
 
+    <!-- Coluna Esquerda - Formulário Principal -->
+    <div class="form-section">
+      <h3>Informações do Agendamento</h3>
 
-
-    <ion-list lines="none" class="card" [class.disabled]="hasActiveAppointment">
-
-      <!-- Procedimento -->
-      <ion-item>
-        <ion-label position="stacked">Procedimento</ion-label>
-        <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="setProcedimento(selectedProcedimento)">
-          <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">{{ p.nome }} </ion-select-option>
-        </ion-select>
-      </ion-item>
+      <ion-list lines="none" class="card">
+        <!-- Procedimento -->
+        <ion-item>
+          <ion-label position="stacked">Procedimento</ion-label>
+          <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="setProcedimento(selectedProcedimento)">
+            <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">{{ p.nome }} </ion-select-option>
+          </ion-select>
+        </ion-item>
 
       <!-- Profissional -->
       <div class="profissional-section">
@@ -140,15 +148,21 @@
         </div>
       </ng-container>
 
-    </ion-list>
-  </div>
-
-  <!-- Rodapé -->
-  <div class="footer">
-    <div class="price">
-      <h2>R$ {{ (currentPrice / 100).toFixed(2) }}</h2>
-      <p>{{ currentDuration }} min</p>
+      </ion-list>
     </div>
-    <ion-button expand="block" class="btn-submit" (click)="onSubmit()">Continuar</ion-button>
-  </div>
-</ion-content>
+
+    <!-- Coluna Direita - Resumo e Preço -->
+    <div class="form-section">
+      <h3>Resumo do Agendamento</h3>
+
+      <div class="price-duration">
+        <h3>Valor Total</h3>
+        <div class="price">R$ {{ (currentPrice / 100).toFixed(2) }}</div>
+        <div class="duration">{{ currentDuration }} minutos</div>
+      </div>
+
+      <ion-button expand="block" class="submit-button" (click)="onSubmit()">
+        Continuar
+      </ion-button>
+    </div>
+    <!-- Removido fechamento duplicado de </div> -->
