@@ -70,4 +70,80 @@ ion-input, ion-button {
   }
 }
 
+// Breakpoints para desktop
+@media (min-width: 768px) {
+  .login-wrapper {
+    padding: 40px;
+  }
+
+  .card {
+    max-width: 500px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .title {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    margin-bottom: 40px;
+  }
+
+  .form-group {
+    margin-bottom: 25px;
+  }
+
+  .form-group ion-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .form-group ion-input {
+    --padding-start: 20px;
+    --padding-end: 20px;
+    --padding-top: 15px;
+    --padding-bottom: 15px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+  }
+
+  .login-button {
+    height: 55px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 15px;
+    margin-top: 30px;
+  }
+
+  .register-section {
+    margin-top: 30px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 15px;
+  }
+
+  .register-section p {
+    font-size: 1rem;
+    margin-bottom: 15px;
+  }
+
+  .register-button {
+    height: 45px;
+    font-weight: 600;
+    border-radius: 10px;
+  }
+
+  .error-message {
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 1rem;
+  }
+}
+
 

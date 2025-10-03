@@ -1,0 +1,3 @@
+# Versão mais básica - apenas o essencial
+RewriteEngine On
+RewriteRule ^(.*)$ index.php [QSA,L]

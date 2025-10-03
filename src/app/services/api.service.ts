@@ -9,7 +9,7 @@ import { Storage } from '@ionic/storage-angular';
   providedIn: 'root'
 })
 export class ApiService {
-  private readonly baseUrl = environment.apiBaseUrl;
+  private readonly baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient, private storage: Storage) {}
 
@@ -26,6 +26,18 @@ export class ApiService {
 
   login(payload: { email: string; password: string }): Observable<any> {
     const url = `${this.baseUrl}/auth/login`;
+    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
+    return this.http.post(url, payload, { headers });
+  }
+
+  createAccount(payload: {
+    name: string;
+    email: string;
+    phone: string;
+    password: string;
+    role: string;
+  }): Observable<any> {
+    const url = `${this.baseUrl}/auth/register`;
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http.post(url, payload, { headers });
   }
@@ -208,6 +220,20 @@ export class ApiService {
     const url = `${this.baseUrl}/agendamentos/${id}/desmarcar`;
     return from(this.getAuthHeaders()).pipe(
       switchMap(headers => this.http.post(url, { justificativa }, { headers }))
+    );
+  }
+
+  updateAgendamentoStatus(id: number, dados: { status: string; mensagem?: string }): Observable<any> {
+    const url = `${this.baseUrl}/agendamentos/${id}/status`;
+    return from(this.getAuthHeaders()).pipe(
+      switchMap(headers => this.http.put(url, dados, { headers }))
+    );
+  }
+
+  atualizarAgendamentosExpirados(): Observable<any> {
+    const url = `${this.baseUrl}/agendamentos/atualizar-expirados`;
+    return from(this.getAuthHeaders()).pipe(
+      switchMap(headers => this.http.post(url, {}, { headers }))
     );
   }
 }

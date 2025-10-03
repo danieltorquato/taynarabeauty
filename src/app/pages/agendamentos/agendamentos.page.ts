@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 import { addIcons } from 'ionicons';
 import { calendarOutline, personOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
 
@@ -13,6 +14,7 @@ import { calendarOutline, personOutline, informationCircleOutline, timeOutline }
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
+  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
   imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
@@ -50,7 +52,7 @@ export class AgendamentoPage implements OnInit {
   selectedSegment = 'todos';
 
 
-  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute) {
+  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService) {
     // Registrar ícones
     addIcons({informationCircleOutline,calendarOutline,timeOutline,personOutline});
   }
@@ -190,6 +192,53 @@ export class AgendamentoPage implements OnInit {
 
   navigateToMeusAgendamentos() {
     this.router.navigateByUrl('/meus-agendamentos');
+  }
+
+  private saveTemporaryAppointmentData() {
+    const appointmentData = {
+      selectedProcedimento: this.selectedProcedimento,
+      selectedProfissional: this.selectedProfissional,
+      selectedDate: this.selectedDate,
+      selectedTime: this.selectedTime,
+      tipoCilios: this.tipoCilios,
+      corCilios: this.corCilios,
+      corLabios: this.corLabios,
+      note: this.note
+    };
+    localStorage.setItem('tempAppointmentData', JSON.stringify(appointmentData));
+  }
+
+  private restoreTemporaryAppointmentData() {
+    const savedData = localStorage.getItem('tempAppointmentData');
+    if (savedData) {
+      try {
+        const appointmentData = JSON.parse(savedData);
+        this.selectedProcedimento = appointmentData.selectedProcedimento || 0;
+        this.selectedProfissional = appointmentData.selectedProfissional || 0;
+        this.selectedDate = appointmentData.selectedDate || '';
+        this.selectedTime = appointmentData.selectedTime || '';
+        this.tipoCilios = appointmentData.tipoCilios || '';
+        this.corCilios = appointmentData.corCilios || '';
+        this.corLabios = appointmentData.corLabios || '';
+        this.note = appointmentData.note || '';
+
+        // Recalcular preço e duração
+        this.calculatePriceAndDuration();
+
+        // Recarregar horários se data foi selecionada
+        if (this.selectedDate) {
+          this.onDateChange();
+        }
+
+        // Limpar dados temporários
+        localStorage.removeItem('tempAppointmentData');
+
+        // Carregar agendamentos do usuário após login
+        this.loadMeusAgendamentos();
+      } catch (error) {
+        console.error('Erro ao restaurar dados temporários:', error);
+      }
+    }
   }
 
   getStatusColor(status: string): string {

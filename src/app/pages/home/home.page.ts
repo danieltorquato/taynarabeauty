@@ -1,17 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule, TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { IonContent, IonCard, IonCol, IonCardHeader, IonCardContent, IonCardTitle, IonRow, IonGrid, IonButton } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCol, IonCardHeader, IonCardContent, IonCardTitle, IonRow, IonGrid, IonButton, IonIcon } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
+import { addIcons } from 'ionicons';
+import { logOutOutline, logInOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [IonButton, IonGrid, IonRow, IonCardTitle, IonCardContent, IonCardHeader, IonCol, IonCard, CommonModule, RouterLink, IonContent, TitleCasePipe],
+  imports: [IonIcon, IonButton, IonGrid, IonRow, IonCardTitle, IonCardContent, IonCardHeader, IonCol, IonCard, CommonModule, RouterLink, IonContent, TitleCasePipe],
 })
 export class HomePage implements OnInit {
   currentUser: any = null;
@@ -24,7 +26,9 @@ export class HomePage implements OnInit {
     private authService: AuthService,
     private router: Router,
     private api: ApiService
-  ) {}
+  ) {
+    addIcons({ logOutOutline, logInOutline });
+  }
 
   ngOnInit() {
     this.authService.user$.subscribe(user => {
@@ -100,5 +104,16 @@ export class HomePage implements OnInit {
 
   canAccessDashboard(): boolean {
     return this.authService.canAccessDashboard();
+  }
+
+  getInitials(name: string): string {
+    if (!name) return 'U';
+
+    const names = name.trim().split(' ');
+    if (names.length === 1) {
+      return names[0].charAt(0).toUpperCase();
+    }
+
+    return (names[0].charAt(0) + names[names.length - 1].charAt(0)).toUpperCase();
   }
 }

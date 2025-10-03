@@ -1,0 +1,30 @@
+{
+  "production": {
+    "domain": "https://seudominio.com",
+    "apiUrl": "https://seudominio.com/api",
+    "database": {
+      "host": "localhost",
+      "name": "taynarabeauty_prod",
+      "username": "taynarabeauty_user",
+      "password": "sua_senha_segura_aqui"
+    }
+  },
+  "development": {
+    "domain": "http://localhost:4200",
+    "apiUrl": "http://localhost:8000",
+    "database": {
+      "host": "localhost",
+      "name": "taynarabeauty_dev",
+      "username": "root",
+      "password": ""
+    }
+  },
+  "instructions": {
+    "1": "Edite este arquivo com suas configurações de produção",
+    "2": "Execute: build-prod.bat (Windows) ou ./build-prod.sh (Linux/Mac)",
+    "3": "Faça upload da pasta www/ para public_html/",
+    "4": "Faça upload da pasta api/ para public_html/api/",
+    "5": "Configure o banco de dados no servidor",
+    "6": "Teste o sistema online"
+  }
+}
