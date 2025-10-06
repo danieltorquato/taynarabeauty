@@ -107,6 +107,11 @@ class ProfissionaisController {
         // Lógica de especialização hardcoded como fallback
         $profissionais = [];
 
+        // Se não há procedimentoId, retornar lista vazia (não mostrar ninguém)
+        if (!$procedimentoId) {
+            return $profissionais;
+        }
+
         // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)
         if (in_array($procedimentoId, [1, 2, 3, 5, 6])) {
             $stmt = $conn->prepare('SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome FROM profissionais p LEFT JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = 1 AND p.ativo = 1');
@@ -143,18 +148,23 @@ class ProfissionaisController {
     private function getProfissionaisDemo($procedimentoId) {
         $profissionais = [];
 
+        // Se não há procedimentoId, retornar lista vazia (não mostrar ninguém)
+        if (!$procedimentoId) {
+            return $profissionais;
+        }
+
         // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)
-        if (!$procedimentoId || in_array($procedimentoId, [1, 2, 3, 5, 6])) {
+        if (in_array($procedimentoId, [1, 2, 3, 5, 6])) {
             $profissionais[] = ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara'];
         }
 
         // Mayara (ID 2) - Especialista em lábios (procedimento_id 4)
-        if (!$procedimentoId || in_array($procedimentoId, [4])) {
+        if (in_array($procedimentoId, [4])) {
             $profissionais[] = ['id' => 2, 'nome' => 'Mayara Casagrande', 'usuario_id' => 4, 'usuario_nome' => 'Mayara'];
         }
 
         // Sara (ID 3) - Especialista em lábios (procedimento_id 4)
-        if (!$procedimentoId || in_array($procedimentoId, [4])) {
+        if (in_array($procedimentoId, [4])) {
             $profissionais[] = ['id' => 3, 'nome' => 'Sara Casagrande', 'usuario_id' => 5, 'usuario_nome' => 'Sara'];
         }
 

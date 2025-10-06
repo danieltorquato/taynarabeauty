@@ -72,16 +72,19 @@ export class AgendamentoPage implements OnInit {
             const ciliosProcedure = this.procedimentos.find(p => p.categoria === 'cilios');
             if (ciliosProcedure) {
               this.selectedProcedimento = ciliosProcedure.id;
+              this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
               this.setDefaultOptions();
             }
           } else if (param === 'labios') {
             const labiosProcedure = this.procedimentos.find(p => p.categoria === 'labios');
             if (labiosProcedure) {
               this.selectedProcedimento = labiosProcedure.id;
+              this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
               this.setDefaultOptions();
             }
           } else if (this.procedimentos.length > 0) {
             this.selectedProcedimento = this.procedimentos[0].id;
+            this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
             this.setDefaultOptions();
           }
         }
@@ -194,7 +197,8 @@ export class AgendamentoPage implements OnInit {
       try {
         const appointmentData = JSON.parse(savedData);
         this.selectedProcedimento = appointmentData.selectedProcedimento || 0;
-        this.selectedProfissional = appointmentData.selectedProfissional || 0;
+        // NÃO restaurar selectedProfissional - sempre usar "Sem preferência" (0)
+        this.selectedProfissional = 0;
         this.selectedDate = appointmentData.selectedDate || '';
         this.selectedTime = appointmentData.selectedTime || '';
         this.tipoCilios = appointmentData.tipoCilios || '';
@@ -425,6 +429,9 @@ export class AgendamentoPage implements OnInit {
     this.setDefaultOptions();
     this.calculatePriceAndDuration();
     await this.storage.set('selectedProcedimento', procedimentoId);
+
+    // Resetar seleção de profissional antes de carregar novos
+    this.selectedProfissional = 0;
 
     // Recarregar profissionais baseado no procedimento selecionado
     this.loadProfissionais(procedimentoId);

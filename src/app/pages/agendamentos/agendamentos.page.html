@@ -152,17 +152,17 @@
     </div>
 
     <!-- Coluna Direita - Resumo e Preço -->
-    <div class="form-section">
-      <h3>Resumo do Agendamento</h3>
+    <div class="form-section summary-footer">
+      <div class="summary-content">
+        <div class="price-info">
+          <h3>Valor Total</h3>
+          <div class="price-value">R$ {{ (currentPrice / 100).toFixed(2) }}</div>
+          <div class="duration-info">{{ currentDuration }} minutos</div>
+        </div>
 
-      <div class="price-duration">
-        <h3>Valor Total</h3>
-        <div class="price">R$ {{ (currentPrice / 100).toFixed(2) }}</div>
-        <div class="duration">{{ currentDuration }} minutos</div>
+        <ion-button class="submit-button" (click)="onSubmit()">
+          Continuar
+        </ion-button>
       </div>
-
-      <ion-button expand="block" class="submit-button" (click)="onSubmit()">
-        Continuar
-      </ion-button>
     </div>
     <!-- Removido fechamento duplicado de </div> -->

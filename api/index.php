@@ -151,7 +151,7 @@ if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 // Admin
 if ($route === '/admin/agendamentos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new AdminController();
-    $controller->agendamentos();
+    $controller->listarAgendamentos();
     exit;
 }
 
