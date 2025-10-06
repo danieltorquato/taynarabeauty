@@ -14,7 +14,7 @@ import { calendarOutline, personOutline, informationCircleOutline, timeOutline, 
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
-  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
+  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
   procedimentos: any[] = [];
@@ -28,6 +28,11 @@ export class AgendamentoPage implements OnInit {
   tipoCilios: string = '';
   corCilios: string = '';
   corLabios: string = '';
+
+  // IDs das FK para combo
+  tipoCiliosId: number | null = null;
+  corCiliosId: number | null = null;
+  corLabiosId: number | null = null;
   horariosDisponiveis: string[] = [];
 
   // Dados dinâmicos calculados
@@ -110,11 +115,9 @@ export class AgendamentoPage implements OnInit {
   }
 
   private loadProfissionais(procedimentoId?: number) {
-    console.log('🔄 Carregando profissionais para procedimento:', procedimentoId);
     this.api.getProfissionais(procedimentoId).subscribe({
       next: (res) => {
         if (res.success) {
-          console.log('✅ Profissionais carregados:', res.profissionais);
           this.profissionais = res.profissionais;
 
           // Set default to "Sem preferência" (ID 0)
@@ -320,41 +323,132 @@ export class AgendamentoPage implements OnInit {
   }
 
   setDefaultOptions() {
-    const proc = this.procedimentos.find(p => p.id === this.selectedProcedimento);
-    if (proc) {
-      if (proc.categoria === 'cilios') {
-        const firstCiliosType = this.getCiliosTypeOptions()[0];
-        this.tipoCilios = firstCiliosType?.value || 'volume_brasileiro';
-        this.corCilios = 'preto';
-      } else if (proc.categoria === 'labios') {
-        const firstLabiosCor = this.getLabiosCorOptions()[0];
-        this.corLabios = firstLabiosCor?.value || 'ruby';
-      } else if (proc.categoria === 'combo' || proc.id === 5) {
-        const firstCombo = this.getComboOptions()[0];
-        this.tipoCilios = firstCombo?.value || 'combo_preto';
-        this.corCilios = 'preto';
-        this.corLabios = 'ruby';
-      }
-    }
-    this.calculatePriceAndDuration();
+    // Limpar todas as seleções - usuário deve selecionar manualmente
+    this.tipoCilios = '';
+    this.corCilios = '';
+    this.corLabios = '';
+    this.tipoCiliosId = null;
+    this.corCiliosId = null;
+    this.corLabiosId = null;
+    this.currentPrice = 0;
+    this.currentDuration = 0;
+    this.selectedOptions = [];
   }
 
   // Métodos para atualizar seleções e recalcular
   updateTipoCilios(valor: string) {
+    // Impedir desseleção - só permite selecionar se não estiver vazio
+    if (!valor || valor === '') return;
+
     this.tipoCilios = valor;
+
+    // Para combo, buscar o ID da FK nas combinações
+    if (this.isComboSelected) {
+      const opcao = this.selectedProcedimentoOpcoes.find(opt =>
+        opt.tipo === 'combo_completo' &&
+        this.getTipoCiliosValueFromLabel(opt.label) === valor
+      );
+      this.tipoCiliosId = opcao?.id_tipo_cilios || null;
+      console.log('🔍 Tipo de cílios selecionado:', valor, '| ID:', this.tipoCiliosId);
+
+      // Se já temos todos os IDs, buscar a combinação específica
+      if (this.corCiliosId && this.corLabiosId) {
+        this.buscarCombinacaoEspecifica();
+      }
+    }
+
     this.calculatePriceAndDuration();
   }
 
   updateCorCilios(valor: string) {
+    // Impedir desseleção - só permite selecionar se não estiver vazio
+    if (!valor || valor === '') return;
+
     this.corCilios = valor;
+
+    // Para combo, buscar o ID da FK nas combinações
+    if (this.isComboSelected) {
+      const opcao = this.selectedProcedimentoOpcoes.find(opt =>
+        opt.tipo === 'combo_completo' &&
+        this.getCorCiliosValueFromLabel(opt.label) === valor
+      );
+      this.corCiliosId = opcao?.id_cor_cilios || null;
+      console.log('🔍 Cor dos cílios selecionada:', valor, '| ID:', this.corCiliosId);
+
+      // Se já temos todos os IDs, buscar a combinação específica
+      if (this.tipoCiliosId && this.corLabiosId) {
+        this.buscarCombinacaoEspecifica();
+      }
+    }
+
     // Recalcular pois cor pode afetar preço
     this.calculatePriceAndDuration();
   }
 
   updateCorLabios(valor: string) {
+    // Impedir desseleção - só permite selecionar se não estiver vazio
+    if (!valor || valor === '') return;
+
     this.corLabios = valor;
-    // Recalcular preço pois diferentes cores têm preços diferentes
-    this.calculatePriceAndDuration();
+
+    // Para combo, buscar o ID da FK nas combinações
+    if (this.isComboSelected) {
+      const opcao = this.selectedProcedimentoOpcoes.find(opt =>
+        opt.tipo === 'combo_completo' &&
+        this.getCorLabiosValueFromLabel(opt.label) === valor
+      );
+      this.corLabiosId = opcao?.id_cor_labios || null;
+      console.log('🔍 Cor dos lábios selecionada:', valor, '| ID:', this.corLabiosId);
+
+      // Após selecionar a cor dos lábios, buscar a combinação específica
+      this.buscarCombinacaoEspecifica();
+    } else {
+      // Para outros procedimentos, usar o cálculo normal
+      this.calculatePriceAndDuration();
+    }
+  }
+
+  // Método para buscar combinação específica no banco usando os 3 IDs
+  buscarCombinacaoEspecifica() {
+    if (!this.isComboSelected || !this.tipoCiliosId || !this.corCiliosId || !this.corLabiosId) {
+      console.log('❌ Não é possível buscar combinação - IDs incompletos');
+      return;
+    }
+
+    console.log('🔍 Buscando combinação específica no banco...');
+    console.log('🔍 IDs:', {
+      tipoCiliosId: this.tipoCiliosId,
+      corCiliosId: this.corCiliosId,
+      corLabiosId: this.corLabiosId
+    });
+
+    // Buscar a combinação específica nas opções carregadas
+    const combinacao = this.selectedProcedimentoOpcoes.find(opt =>
+      opt.tipo === 'combo_completo' &&
+      opt.id_tipo_cilios === this.tipoCiliosId &&
+      opt.id_cor_cilios === this.corCiliosId &&
+      opt.id_cor_labios === this.corLabiosId
+    );
+
+    if (combinacao) {
+      console.log('✅ Combinação encontrada:', combinacao);
+      console.log('✅ Preço:', combinacao.preco_centavos);
+      console.log('✅ Duração:', combinacao.duracao);
+      console.log('✅ Label:', combinacao.label);
+
+      // Atualizar preço e duração diretamente do backend
+      this.currentPrice = combinacao.preco_centavos || 0;
+      this.currentDuration = combinacao.duracao || 0;
+      this.selectedOptions = [combinacao];
+
+      console.log('✅ Preço atualizado para:', this.currentPrice);
+      console.log('✅ Duração atualizada para:', this.currentDuration);
+    } else {
+      console.log('❌ Combinação não encontrada no banco');
+      this.currentPrice = 0;
+      this.currentDuration = 0;
+      this.selectedOptions = [];
+    }
   }
 
   selectProfissional(profissionalId: number) {
@@ -373,37 +467,20 @@ export class AgendamentoPage implements OnInit {
   }
 
   onDateChange() {
-    console.log('🔔 onDateChange CHAMADO!');
-
     if (!this.selectedDate) {
-      console.log('❌ selectedDate está vazio!');
       return;
     }
 
     // Corrigir problema de fuso horário - usar apenas a parte da data
     const date = this.selectedDate.split('T')[0];
 
-    console.log('=== DADOS DA REQUISIÇÃO ===');
-    console.log('Data selecionada:', this.selectedDate);
-    console.log('Data formatada:', date);
-    console.log('Profissional:', this.selectedProfissional);
-    console.log('Procedimento:', this.selectedProcedimento);
-    console.log('=========================');
 
     this.api.getHorarios(date, this.selectedProfissional, this.selectedProcedimento).subscribe({
       next: (res) => {
-        console.log('=== RESPOSTA DA API ===');
-        console.log('Success:', res.success);
-        console.log('Horarios:', res.horarios);
-        console.log('Tipo de horarios:', typeof res.horarios);
-        console.log('É array?:', Array.isArray(res.horarios));
-        console.log('Resposta completa:', res);
-        console.log('=====================');
 
         if (res.success) {
           if (res.horarios && Array.isArray(res.horarios) && res.horarios.length > 0) {
             this.horariosDisponiveis = res.horarios.map((h: any) => h.hora.substring(0, 5));
-            console.log('✅ Horários carregados:', this.horariosDisponiveis.length, 'horários');
           } else {
             console.warn('⚠️ API retornou success: true, mas sem horários');
             this.horariosDisponiveis = [];
@@ -451,6 +528,10 @@ export class AgendamentoPage implements OnInit {
   }
 
   getProcedimentoIdByCategoria(categoria: string): number {
+    if (categoria === 'combo') {
+      const procedimento = this.procedimentos.find(p => p.categoria === 'combo' || p.nome.toLowerCase().includes('combo'));
+      return procedimento ? procedimento.id : 0;
+    }
     const procedimento = this.procedimentos.find(p => p.categoria === categoria);
     return procedimento ? procedimento.id : 0;
   }
@@ -460,15 +541,116 @@ export class AgendamentoPage implements OnInit {
   }
 
   get isComboSelected(): boolean {
-    return this.selectedProcedimentoCategoria === 'combo' || this.selectedProcedimento === 5;
+    const proc = this.procedimentos.find(p => p.id === this.selectedProcedimento);
+    return proc ? (proc.categoria === 'combo' || proc.nome.toLowerCase().includes('combo')) : false;
   }
 
   get selectedProcedimentoOpcoes(): any[] {
     return this.opcoes[this.selectedProcedimento] || [];
   }
 
+  // Métodos para combo
+  getComboCiliosTypeOptions(): any[] {
+    if (!this.isComboSelected) return [];
+
+
+    // Extrair tipos únicos de cílios das combinações de combo
+    const tipos = new Set();
+    this.selectedProcedimentoOpcoes
+      .filter(opt => opt.tipo === 'combo_completo')
+      .forEach(opt => {
+        if (opt.id_tipo_cilios) {
+          tipos.add(JSON.stringify({
+            id: opt.id_tipo_cilios,
+            label: this.extractTipoCiliosFromLabel(opt.label),
+            value: this.getTipoCiliosValueFromLabel(opt.label)
+          }));
+        }
+      });
+
+    const result = Array.from(tipos).map(tipo => JSON.parse(tipo as string));
+    return result;
+  }
+
+  getComboCiliosCorOptions(): any[] {
+    if (!this.isComboSelected) return [];
+
+    // Extrair cores únicas de cílios das combinações de combo
+    const cores = new Set();
+    this.selectedProcedimentoOpcoes
+      .filter(opt => opt.tipo === 'combo_completo')
+      .forEach(opt => {
+        if (opt.id_cor_cilios) {
+          cores.add(JSON.stringify({
+            id: opt.id_cor_cilios,
+            label: this.extractCorCiliosFromLabel(opt.label),
+            value: this.getCorCiliosValueFromLabel(opt.label)
+          }));
+        }
+      });
+
+    return Array.from(cores).map(cor => JSON.parse(cor as string));
+  }
+
+  getComboLabiosCorOptions(): any[] {
+    if (!this.isComboSelected) return [];
+
+    // Extrair cores únicas de lábios das combinações de combo
+    const cores = new Set();
+    this.selectedProcedimentoOpcoes
+      .filter(opt => opt.tipo === 'combo_completo')
+      .forEach(opt => {
+        if (opt.id_cor_labios) {
+          cores.add(JSON.stringify({
+            id: opt.id_cor_labios,
+            label: this.extractCorLabiosFromLabel(opt.label),
+            value: this.getCorLabiosValueFromLabel(opt.label)
+          }));
+        }
+      });
+
+    return Array.from(cores).map(cor => JSON.parse(cor as string));
+  }
+
   getCiliosTypeOptions(): any[] {
     return this.selectedProcedimentoOpcoes.filter(opt => opt.tipo === 'cilios_tipo');
+  }
+
+  // Métodos auxiliares para extrair informações dos labels de combo
+  extractTipoCiliosFromLabel(label: string): string {
+    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Fio a Fio - Rímel"
+    const parts = label.split(' + ');
+    return parts[0] || '';
+  }
+
+  getTipoCiliosValueFromLabel(label: string): string {
+    const tipo = this.extractTipoCiliosFromLabel(label);
+    return tipo === 'Fio a Fio - Rímel' ? 'fio_rimel' :
+           tipo === 'Volume Brasileiro' ? 'volume_brasileiro' :
+           tipo === 'Volume Inglês' ? 'volume_ingles' :
+           tipo === 'Fox Eyes - Raposinha' ? 'fox_eyes' : 'lash_lifting';
+  }
+
+  extractCorCiliosFromLabel(label: string): string {
+    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Preto"
+    const parts = label.split(' + ');
+    return parts[1] || '';
+  }
+
+  getCorCiliosValueFromLabel(label: string): string {
+    const cor = this.extractCorCiliosFromLabel(label);
+    return cor.toLowerCase();
+  }
+
+  extractCorLabiosFromLabel(label: string): string {
+    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Ruby"
+    const parts = label.split(' + ');
+    return parts[2] || '';
+  }
+
+  getCorLabiosValueFromLabel(label: string): string {
+    const cor = this.extractCorLabiosFromLabel(label);
+    return cor.toLowerCase();
   }
 
   // Método para obter opções de combo
@@ -483,6 +665,36 @@ export class AgendamentoPage implements OnInit {
   getLabiosCorOptions(): any[] {
     return this.selectedProcedimentoOpcoes.filter(opt => opt.tipo === 'labios_cor');
   }
+
+  // Métodos auxiliares para labels
+  getTipoCiliosLabel(tipo: string): string {
+    const labels: { [key: string]: string } = {
+      'fio_rimel': 'Fio a Fio - Rímel',
+      'volume_brasileiro': 'Volume Brasileiro',
+      'volume_ingles': 'Volume Inglês',
+      'fox_eyes': 'Fox Eyes - Raposinha',
+      'lash_lifting': 'Lash Lifting'
+    };
+    return labels[tipo] || tipo;
+  }
+
+  getLabiosCorLabel(cor: string): string {
+    const labels: { [key: string]: string } = {
+      'ruby': 'Ruby',
+      'darling': 'Darling',
+      'full_lips': 'Full Lips',
+      'peach': 'Peach',
+      'penelope': 'Penélope',
+      'red_life': 'Red Life',
+      'red_rose': 'Red Rose',
+      'san': 'San',
+      'terracota': 'Terracota',
+      'true_love': 'True Love',
+      'utopia': 'Utopia'
+    };
+    return labels[cor] || cor;
+  }
+
 
   getCorBackground(opcao: any): string {
     // Se tem campo hex, usa ele
@@ -542,15 +754,36 @@ export class AgendamentoPage implements OnInit {
           this.selectedOptions = [firstLabios];
         }
       }
-    } else if (this.isComboSelected) {
-      // Para combo, pegar a opção específica selecionada
-      const comboOpcao = opcoes.find(opt => opt.tipo === 'combo' && opt.value === this.tipoCilios);
-      if (comboOpcao) {
-        this.currentPrice = comboOpcao.preco_centavos || 0;
-        this.currentDuration = comboOpcao.duracao || 0;
-        this.selectedOptions = [comboOpcao];
-      }
-    }
+        } else if (this.isComboSelected) {
+
+          // Para combo, buscar a combinação específica usando as FK
+          console.log('🔍 Buscando combinação com IDs:', {
+            tipoCiliosId: this.tipoCiliosId,
+            corCiliosId: this.corCiliosId,
+            corLabiosId: this.corLabiosId
+          });
+          const comboOpcao = opcoes.find(opt =>
+            opt.tipo === 'combo_completo' &&
+            opt.id_tipo_cilios === this.tipoCiliosId &&
+            opt.id_cor_cilios === this.corCiliosId &&
+            opt.id_cor_labios === this.corLabiosId
+          );
+          console.log('🔍 Combinação encontrada:', comboOpcao);
+
+
+          if (comboOpcao) {
+            this.currentPrice = comboOpcao.preco_centavos || 0;
+            this.currentDuration = comboOpcao.duracao || 0;
+            this.selectedOptions = [comboOpcao];
+          } else {
+            // Se não encontrou a combinação específica, definir preço como 0
+            // (isso não deveria acontecer se os IDs estiverem corretos)
+            this.currentPrice = 0;
+            this.currentDuration = 0;
+            this.selectedOptions = [];
+            console.log('❌ Combinação não encontrada - verifique se os IDs estão corretos');
+          }
+        }
 
     // Recalcular horários disponíveis se uma data já foi selecionada
     if (this.selectedDate) {
@@ -580,17 +813,12 @@ export class AgendamentoPage implements OnInit {
 
   // Filtrar horários que não conflitam
   get horariosDisponiveisFiltrados(): string[] {
-    console.log('🔍 Filtrando horários...');
-    console.log('🔍 Horários disponíveis antes do filtro:', this.horariosDisponiveis);
-    console.log('🔍 Duração do procedimento:', this.currentDuration);
 
     const filtered = this.horariosDisponiveis.filter(slot => {
       const conflict = this.conflictWithDuration(slot);
-      console.log(`🔍 Horário ${slot} - Conflito: ${conflict}`);
       return !conflict;
     });
 
-    console.log('🔍 Horários filtrados:', filtered);
     return filtered;
   }
 
@@ -603,6 +831,24 @@ export class AgendamentoPage implements OnInit {
     if (this.selectedProfissional === null || this.selectedProfissional === undefined) {
       alert('Selecione um profissional ou escolha "Sem preferência" para agendamento automático.');
       return;
+    }
+
+    // Validar se todas as opções de combo estão selecionadas
+    if (this.isComboSelected) {
+      if (!this.tipoCilios || !this.corCilios || !this.corLabios) {
+        alert('Selecione todas as opções do combo: tipo de cílios, cor dos cílios e cor dos lábios.');
+        return;
+      }
+    } else if (this.isCiliosSelected) {
+      if (!this.tipoCilios || !this.corCilios) {
+        alert('Selecione o tipo e cor dos cílios.');
+        return;
+      }
+    } else if (this.isLabiosSelected) {
+      if (!this.corLabios) {
+        alert('Selecione a cor dos lábios.');
+        return;
+      }
     }
 
     // Verificar se o usuário está logado

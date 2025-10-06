@@ -69,7 +69,7 @@
                   <ion-icon name="eye-outline"></ion-icon>
                 </div>
                 <div class="combo-right">
-                  <ion-icon name="heart-outline"></ion-icon>
+                  <ion-icon name="eyedrop-outline"></ion-icon>
                 </div>
               </div>
               <span class="procedimento-label">Combo</span>
@@ -142,45 +142,156 @@
       <!-- Opções por procedimento -->
       <ng-container *ngIf="isCiliosSelected">
         <!-- Tipos de cílios (se disponível) -->
-        <ion-item *ngIf="getCiliosTypeOptions().length > 0">
-          <ion-label position="stacked">Tipo de cílios</ion-label>
-          <ion-select interface="popover" [(ngModel)]="tipoCilios" (ionChange)="updateTipoCilios(tipoCilios)">
-            <ion-select-option *ngFor="let opt of getCiliosTypeOptions()" [value]="opt.value">{{ opt.label }}</ion-select-option>
-          </ion-select>
-        </ion-item>
+        <ng-container *ngIf="getCiliosTypeOptions().length > 0">
+          <ion-label class="section-label">Tipo de cílios</ion-label>
+          <div class="options-grid">
+            <div
+              *ngFor="let opt of getCiliosTypeOptions()"
+              class="option-item">
+              <div
+                class="option-card"
+                [class.selected]="tipoCilios === opt.value"
+                (click)="updateTipoCilios(opt.value)">
+                <div class="option-icon">
+                  <ion-icon name="eye-outline"></ion-icon>
+                </div>
+              </div>
+              <span
+                class="option-label-text"
+                [class.selected]="tipoCilios === opt.value">
+                {{ opt.label }}
+              </span>
+            </div>
+          </div>
+        </ng-container>
 
         <!-- Cores de cílios (se disponível) -->
         <ng-container *ngIf="getCiliosCorOptions().length > 0">
-          <ion-label class="label-inline">Cor dos cílios</ion-label>
-          <div class="color-chips">
-            <ion-chip *ngFor="let c of getCiliosCorOptions()" (click)="updateCorCilios(c.value)" [class.active]="corCilios === c.value">
-              <span class="dot" [style.background]="c.value === 'preto' ? '#000000' : '#8B4513'"></span>
-              {{ c.label }}
-            </ion-chip>
+          <ion-label class="section-label">Cor dos cílios</ion-label>
+          <div class="options-grid">
+            <div
+              *ngFor="let c of getCiliosCorOptions()"
+              class="option-item">
+              <div
+                class="option-card color-option"
+                [class.selected]="corCilios === c.value"
+                (click)="updateCorCilios(c.value)">
+                <div class="option-icon">
+                  <div class="color-dot" [style.background]="c.value === 'preto' ? '#000000' : '#8B4513'"></div>
+                </div>
+              </div>
+              <span
+                class="option-label-text"
+                [class.selected]="corCilios === c.value">
+                {{ c.label }}
+              </span>
+            </div>
           </div>
         </ng-container>
       </ng-container>
 
-      <ng-container *ngIf="isLabiosSelected">
-        <ion-label class="label-inline">Cor dos lábios</ion-label>
-        <div class="color-chips">
-          <ion-chip *ngFor="let c of getLabiosCorOptions()" (click)="updateCorLabios(c.value)" [class.active]="corLabios === c.value">
-            <span class="dot" [style.background]="getCorBackground(c)"></span>
-            {{ c.label }}
-          </ion-chip>
-        </div>
+      <!-- Opções para lábios individuais -->
+      <ng-container *ngIf="isLabiosSelected && !isComboSelected">
+        <ng-container *ngIf="getLabiosCorOptions().length > 0">
+          <ion-label class="section-label">Cor dos lábios</ion-label>
+          <div class="options-grid">
+            <div
+              *ngFor="let c of getLabiosCorOptions()"
+              class="option-item">
+              <div
+                class="option-card color-option"
+                [class.selected]="corLabios === c.value"
+                (click)="updateCorLabios(c.value)">
+                <div class="option-icon">
+                  <div class="color-dot" [style.background]="getCorBackground(c)"></div>
+                </div>
+              </div>
+              <span
+                class="option-label-text"
+                [class.selected]="corLabios === c.value">
+                {{ c.label }}
+              </span>
+            </div>
+          </div>
+        </ng-container>
       </ng-container>
 
       <!-- Combo: Cílios + Lábios -->
       <ng-container *ngIf="isComboSelected">
         <div class="combo-section">
           <h3>Opções de Combo</h3>
-          <ion-item *ngIf="getComboOptions().length > 0">
-            <ion-label position="stacked">Tipo de combo</ion-label>
-            <ion-select interface="popover" [(ngModel)]="tipoCilios" (ionChange)="updateTipoCilios(tipoCilios)">
-              <ion-select-option *ngFor="let opt of getComboOptions()" [value]="opt.value">{{ opt.label }}</ion-select-option>
-            </ion-select>
-          </ion-item>
+
+          <!-- Tipo de cílios para combo -->
+          <ng-container *ngIf="getComboCiliosTypeOptions().length > 0">
+            <ion-label class="section-label">Tipo de cílios</ion-label>
+            <div class="options-grid">
+              <div
+                *ngFor="let opt of getComboCiliosTypeOptions()"
+                class="option-item">
+                <div
+                  class="option-card"
+                  [class.selected]="tipoCilios === opt.value"
+                  (click)="updateTipoCilios(opt.value)">
+                  <div class="option-icon">
+                    <ion-icon name="eye-outline"></ion-icon>
+                  </div>
+                </div>
+                <span
+                  class="option-label-text"
+                  [class.selected]="tipoCilios === opt.value">
+                  {{ opt.label }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Cor dos cílios para combo -->
+          <ng-container *ngIf="getComboCiliosCorOptions().length > 0">
+            <ion-label class="section-label">Cor dos cílios</ion-label>
+            <div class="options-grid">
+              <div
+                *ngFor="let c of getComboCiliosCorOptions()"
+                class="option-item">
+                <div
+                  class="option-card color-option"
+                  [class.selected]="corCilios === c.value"
+                  (click)="updateCorCilios(c.value)">
+                  <div class="option-icon">
+                    <div class="color-dot" [style.background]="c.value === 'preto' ? '#000000' : '#8B4513'"></div>
+                  </div>
+                </div>
+                <span
+                  class="option-label-text"
+                  [class.selected]="corCilios === c.value">
+                  {{ c.label }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Cor dos lábios para combo -->
+          <ng-container *ngIf="getComboLabiosCorOptions().length > 0">
+            <ion-label class="section-label">Cor dos lábios</ion-label>
+            <div class="options-grid">
+              <div
+                *ngFor="let c of getComboLabiosCorOptions()"
+                class="option-item">
+                <div
+                  class="option-card color-option"
+                  [class.selected]="corLabios === c.value"
+                  (click)="updateCorLabios(c.value)">
+                  <div class="option-icon">
+                    <div class="color-dot" [style.background]="getCorBackground(c)"></div>
+                  </div>
+                </div>
+                <span
+                  class="option-label-text"
+                  [class.selected]="corLabios === c.value">
+                  {{ c.label }}
+                </span>
+              </div>
+            </div>
+          </ng-container>
         </div>
       </ng-container>
 

@@ -8,10 +8,10 @@
 class Database {
     // CONFIGURAÇÕES DA SUA HOSPEDAGEM
     private $host = "localhost";                    // Host do banco (geralmente localhost)
-    private $port = "3306";                        // Porta do MySQL (geralmente 3306)
-    private $db_name = "taynarabeauty_prod";        // Nome do banco (com prefixo da hospedagem)
-    private $username = "taynarabeauty_user";       // Usuário do banco
-    private $password = "sua_senha_aqui";           // Senha do banco
+    private $port = "";                        // Porta do MySQL (geralmente 3306)
+    private $db_name = "";        // Nome do banco (com prefixo da hospedagem)
+    private $username = "";       // Usuário do banco
+    private $password = "";           // Senha do banco
     private $charset = "utf8mb4";
     public $conn;
 

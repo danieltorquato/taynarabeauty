@@ -55,6 +55,13 @@ class ProcedimentosController {
                         $opcoesPorProcedimento[$procId][] = $opcao;
                     }
 
+                    // Gerar opções dinâmicas para combos
+                    foreach ($procedimentos as $procedimento) {
+                        if ($procedimento['categoria'] === 'combo' || strpos(strtolower($procedimento['nome']), 'combo') !== false) {
+                            $opcoesPorProcedimento[$procedimento['id']] = $this->gerarOpcoesCombo($opcoesPorProcedimento);
+                        }
+                    }
+
                     // Adicionar cores de cílios para o procedimento 3 se não existirem
                     if (isset($opcoesPorProcedimento[3])) {
                         $temCoresCilios = false;
@@ -144,6 +151,102 @@ class ProcedimentosController {
             error_log('Erro ProcedimentosController::listar: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Erro ao buscar procedimentos: ' . $e->getMessage()]);
+        }
+    }
+
+    private function gerarOpcoesCombo($opcoesPorProcedimento) {
+        try {
+            $db = new Database();
+            $conn = $db->connect();
+
+            if (!$conn) {
+                return [];
+            }
+
+            $opcoes = [];
+
+            // Buscar combinações específicas de combo
+            $stmt = $conn->query('
+                SELECT
+                    procedimento_id,
+                    tipo,
+                    label,
+                    value,
+                    preco_centavos,
+                    duracao,
+                    id_tipo_cilios,
+                    id_cor_cilios,
+                    id_cor_labios
+                FROM procedimento_opcoes
+                WHERE procedimento_id = 5 AND tipo = "combo_completo"
+                ORDER BY preco_centavos, label
+            ');
+            $combinacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Adicionar todas as combinações específicas
+            foreach ($combinacoes as $combo) {
+                $opcoes[] = $combo;
+            }
+
+            return $opcoes;
+
+        } catch (Throwable $e) {
+            error_log('Erro gerarOpcoesCombo: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getComboCombinacao() {
+        try {
+            $ciliosTipoId = $_GET['cilios_tipo_id'] ?? null;
+            $ciliosCorId = $_GET['cilios_cor_id'] ?? null;
+            $labiosCorId = $_GET['labios_cor_id'] ?? null;
+
+            if (!$ciliosTipoId || !$ciliosCorId || !$labiosCorId) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Parâmetros obrigatórios: cilios_tipo_id, cilios_cor_id, labios_cor_id']);
+                return;
+            }
+
+            $db = new Database();
+            $conn = $db->connect();
+
+            if (!$conn) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Erro de conexão com o banco']);
+                return;
+            }
+
+            $stmt = $conn->prepare('
+                SELECT
+                    cc.id,
+                    cc.preco_centavos,
+                    cc.duracao,
+                    ct.nome as tipo_cilios,
+                    cci.nome as cor_cilios,
+                    lc.nome as cor_labios
+                FROM combo_combinacoes cc
+                JOIN cilios_tipos ct ON cc.cilios_tipo_id = ct.id
+                JOIN cilios_cores cci ON cc.cilios_cor_id = cci.id
+                JOIN labios_cores lc ON cc.labios_cor_id = lc.id
+                WHERE cc.cilios_tipo_id = ? AND cc.cilios_cor_id = ? AND cc.labios_cor_id = ?
+                AND cc.ativo = 1
+            ');
+
+            $stmt->execute([$ciliosTipoId, $ciliosCorId, $labiosCorId]);
+            $combinacao = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($combinacao) {
+                echo json_encode(['success' => true, 'combinacao' => $combinacao]);
+            } else {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Combinação não encontrada']);
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro getComboCombinacao: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Erro interno do servidor']);
         }
     }
 }

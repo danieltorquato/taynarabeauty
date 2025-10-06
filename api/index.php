@@ -141,6 +141,12 @@ if ($route === '/procedimentos' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
+if ($route === '/combo/combinacao' && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $controller = new ProcedimentosController();
+    $controller->getComboCombinacao();
+    exit;
+}
+
 // Profissionais
 if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new ProfissionaisController();

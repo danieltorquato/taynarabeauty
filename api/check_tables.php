@@ -1,0 +1,1 @@
+"<?php require_once 'Config/Database.php'; $db = new Database(); $conn = $db->connect(); if ($conn) { $stmt = $conn->query('SHOW TABLES'); $tables = $stmt->fetchAll(PDO::FETCH_COLUMN); echo 'Tabelas: ' . implode(', ', $tables); } else { echo 'Erro de conexao'; } ?>" 
