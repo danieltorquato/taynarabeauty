@@ -7,7 +7,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { addIcons } from 'ionicons';
-import { calendarOutline, personOutline, informationCircleOutline, timeOutline } from 'ionicons/icons';
+import { calendarOutline, personOutline, informationCircleOutline, timeOutline, eyeOutline, heartOutline, eyedropOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-agendamento',
@@ -53,7 +53,7 @@ export class AgendamentoPage implements OnInit {
 
   constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService) {
     // Registrar ícones
-    addIcons({informationCircleOutline,calendarOutline,timeOutline,personOutline});
+    addIcons({informationCircleOutline,eyeOutline,eyedropOutline,heartOutline,personOutline,calendarOutline,timeOutline});
   }
 
   async ngOnInit() {
@@ -74,6 +74,8 @@ export class AgendamentoPage implements OnInit {
               this.selectedProcedimento = ciliosProcedure.id;
               this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
               this.setDefaultOptions();
+              // Carregar profissionais específicos para cílios
+              this.loadProfissionais(ciliosProcedure.id);
             }
           } else if (param === 'labios') {
             const labiosProcedure = this.procedimentos.find(p => p.categoria === 'labios');
@@ -81,11 +83,15 @@ export class AgendamentoPage implements OnInit {
               this.selectedProcedimento = labiosProcedure.id;
               this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
               this.setDefaultOptions();
+              // Carregar profissionais específicos para lábios
+              this.loadProfissionais(labiosProcedure.id);
             }
           } else if (this.procedimentos.length > 0) {
             this.selectedProcedimento = this.procedimentos[0].id;
             this.selectedProfissional = 0; // Sempre resetar para "Sem preferência"
             this.setDefaultOptions();
+            // Carregar profissionais específicos para o primeiro procedimento
+            this.loadProfissionais(this.procedimentos[0].id);
           }
         }
       },
@@ -93,9 +99,6 @@ export class AgendamentoPage implements OnInit {
         console.error('Erro ao carregar procedimentos:', err);
       }
     });
-
-    // Load professionals
-    this.loadProfissionais();
 
     // Load user appointments to check for duplicates (only if logged in)
     if (this.authService.isAuthenticated) {
@@ -445,6 +448,11 @@ export class AgendamentoPage implements OnInit {
 
   get isCiliosSelected(): boolean {
     return this.selectedProcedimentoCategoria === 'cilios';
+  }
+
+  getProcedimentoIdByCategoria(categoria: string): number {
+    const procedimento = this.procedimentos.find(p => p.categoria === categoria);
+    return procedimento ? procedimento.id : 0;
   }
 
   get isLabiosSelected(): boolean {

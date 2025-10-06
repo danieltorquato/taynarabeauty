@@ -26,28 +26,8 @@ class ProfissionaisController {
                     // Filtrar profissionais por especialização baseada no procedimento
                     $profissionais = $this->getProfissionaisPorProcedimento($conn, $procedimentoId);
                 } else {
-                       // Buscar todos os profissionais ativos com competências e horário de almoço
-                       $stmt = $conn->prepare('
-                           SELECT p.id, p.nome, p.usuario_id, p.ativo, p.foto, p.almoco_inicio, p.almoco_fim, u.nome as usuario_nome
-                           FROM profissionais p
-                           LEFT JOIN usuarios u ON p.usuario_id = u.id
-                           ORDER BY p.nome
-                       ');
-                       $stmt->execute();
-                       $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-                // Buscar competências para cada profissional
-                foreach ($profissionais as &$prof) {
-                    $stmt = $conn->prepare('
-                        SELECT pe.procedimento_id
-                        FROM profissional_especializacoes pe
-                        WHERE pe.profissional_id = :profissional_id
-                    ');
-                    $stmt->bindParam(':profissional_id', $prof['id']);
-                    $stmt->execute();
-                    $competencias = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                    $prof['competencias'] = $competencias;
-                }
+                    // Se não há procedimentoId, retornar lista vazia (não mostrar ninguém)
+                    $profissionais = [];
                 }
 
                 // Adicionar fotos de exemplo

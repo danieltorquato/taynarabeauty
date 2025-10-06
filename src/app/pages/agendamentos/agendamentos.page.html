@@ -34,12 +34,48 @@
 
       <ion-list lines="none" class="card">
         <!-- Procedimento -->
-        <ion-item>
-          <ion-label position="stacked">Procedimento</ion-label>
-          <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="setProcedimento(selectedProcedimento)">
-            <ion-select-option *ngFor="let p of procedimentos" [value]="p.id">{{ p.nome }} </ion-select-option>
-          </ion-select>
-        </ion-item>
+        <div class="procedimento-section">
+          <ion-label class="section-label">Escolha o Procedimento</ion-label>
+          <div class="procedimentos-grid">
+            <!-- Cílios -->
+            <div
+              class="procedimento-card"
+              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('cilios')"
+              (click)="setProcedimento(getProcedimentoIdByCategoria('cilios'))">
+              <div class="procedimento-icon">
+                <ion-icon name="eye-outline"></ion-icon>
+              </div>
+              <span class="procedimento-label">Cílios</span>
+            </div>
+
+            <!-- Lábios -->
+            <div
+              class="procedimento-card"
+              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('labios')"
+              (click)="setProcedimento(getProcedimentoIdByCategoria('labios'))">
+              <div class="procedimento-icon">
+                <ion-icon name="eyedrop-outline"></ion-icon>
+              </div>
+              <span class="procedimento-label">Lábios</span>
+            </div>
+
+            <!-- Combo -->
+            <div
+              class="procedimento-card combo-card"
+              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('combo')"
+              (click)="setProcedimento(getProcedimentoIdByCategoria('combo'))">
+              <div class="procedimento-icon combo-icon">
+                <div class="combo-left">
+                  <ion-icon name="eye-outline"></ion-icon>
+                </div>
+                <div class="combo-right">
+                  <ion-icon name="heart-outline"></ion-icon>
+                </div>
+              </div>
+              <span class="procedimento-label">Combo</span>
+            </div>
+          </div>
+        </div>
 
       <!-- Profissional -->
       <div class="profissional-section">
