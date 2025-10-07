@@ -167,6 +167,13 @@ if ($route === '/admin/dashboard' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
+// Admin Horários
+if ($route === '/admin/horarios/salvar-batch' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new HorariosController();
+    $controller->salvarBatch();
+    exit;
+}
+
 // Usuários
 if ($route === '/usuarios' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new UsuariosController();

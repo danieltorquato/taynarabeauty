@@ -61,3 +61,10 @@ RewriteRule ^api/(.*)$ /api/index.php [QSA,L]
 # Configuração de tipos MIME
 AddType application/javascript .js
 AddType text/css .css
+
+Database.php
+Database.prod.php
+Database.production.php
+Database.test.php
+Database.test.php
+

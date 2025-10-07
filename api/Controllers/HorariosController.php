@@ -328,30 +328,89 @@ class HorariosController {
                 if ($status === 'livre') {
                     // Insert or update to 'livre' - incluir profissional_id se fornecido
                     if ($profissionalId) {
-                        $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id) VALUES (:data, :hora, :profissional_id, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
-                        $stmt->bindParam(':data', $data);
-                        $stmt->bindParam(':hora', $hora);
-                        $stmt->bindParam(':profissional_id', $profissionalId);
-                        $stmt->bindParam(':procedimento_id', $procedimentoId);
+                        if ($procedimentoId) {
+                            // Procedimento específico selecionado
+                            $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id) VALUES (:data, :hora, :profissional_id, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
+                            $stmt->bindParam(':data', $data);
+                            $stmt->bindParam(':hora', $hora);
+                            $stmt->bindParam(':profissional_id', $profissionalId);
+                            $stmt->bindParam(':procedimento_id', $procedimentoId);
+                            $stmt->execute();
+                        } else {
+                            // "Todos" selecionado - liberar para cílios (ID 3) e lábios (ID 4)
+                            $procedimentosTodos = [3, 4]; // Cílios e Lábios
+                            foreach ($procedimentosTodos as $procId) {
+                                $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id) VALUES (:data, :hora, :profissional_id, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
+                                $stmt->bindParam(':data', $data);
+                                $stmt->bindParam(':hora', $hora);
+                                $stmt->bindParam(':profissional_id', $profissionalId);
+                                $stmt->bindParam(':procedimento_id', $procId);
+                                $stmt->execute();
+                            }
+                        }
                     } else {
-                        $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, status) VALUES (:data, :hora, "livre") ON DUPLICATE KEY UPDATE status = "livre"');
-                        $stmt->bindParam(':data', $data);
-                        $stmt->bindParam(':hora', $hora);
+                        if ($procedimentoId) {
+                            // Procedimento específico sem profissional
+                            $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, status, procedimento_id) VALUES (:data, :hora, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
+                            $stmt->bindParam(':data', $data);
+                            $stmt->bindParam(':hora', $hora);
+                            $stmt->bindParam(':procedimento_id', $procedimentoId);
+                            $stmt->execute();
+                        } else {
+                            // "Todos" selecionado sem profissional - liberar para cílios (ID 3) e lábios (ID 4)
+                            $procedimentosTodos = [3, 4]; // Cílios e Lábios
+                            foreach ($procedimentosTodos as $procId) {
+                                $stmt = $conn->prepare('INSERT INTO horarios_disponiveis (data, hora, status, procedimento_id) VALUES (:data, :hora, "livre", :procedimento_id) ON DUPLICATE KEY UPDATE status = "livre", procedimento_id = :procedimento_id');
+                                $stmt->bindParam(':data', $data);
+                                $stmt->bindParam(':hora', $hora);
+                                $stmt->bindParam(':procedimento_id', $procId);
+                                $stmt->execute();
+                            }
+                        }
                     }
-                    $stmt->execute();
                 } else if ($status === 'bloqueado') {
                     // Remove from available hours (blocking it) - incluir profissional_id se fornecido
                     if ($profissionalId) {
-                        $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :profissional_id');
-                        $stmt->bindParam(':data', $data);
-                        $stmt->bindParam(':hora', $hora);
-                        $stmt->bindParam(':profissional_id', $profissionalId);
+                        if ($procedimentoId) {
+                            // Bloquear procedimento específico para profissional específico
+                            $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :profissional_id AND procedimento_id = :procedimento_id');
+                            $stmt->bindParam(':data', $data);
+                            $stmt->bindParam(':hora', $hora);
+                            $stmt->bindParam(':profissional_id', $profissionalId);
+                            $stmt->bindParam(':procedimento_id', $procedimentoId);
+                            $stmt->execute();
+                        } else {
+                            // "Todos" selecionado - bloquear para cílios (ID 3) e lábios (ID 4) para profissional específico
+                            $procedimentosTodos = [3, 4]; // Cílios e Lábios
+                            foreach ($procedimentosTodos as $procId) {
+                                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND profissional_id = :profissional_id AND procedimento_id = :procedimento_id');
+                                $stmt->bindParam(':data', $data);
+                                $stmt->bindParam(':hora', $hora);
+                                $stmt->bindParam(':profissional_id', $profissionalId);
+                                $stmt->bindParam(':procedimento_id', $procId);
+                                $stmt->execute();
+                            }
+                        }
                     } else {
-                        $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora');
-                        $stmt->bindParam(':data', $data);
-                        $stmt->bindParam(':hora', $hora);
+                        if ($procedimentoId) {
+                            // Bloquear procedimento específico sem profissional
+                            $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND procedimento_id = :procedimento_id');
+                            $stmt->bindParam(':data', $data);
+                            $stmt->bindParam(':hora', $hora);
+                            $stmt->bindParam(':procedimento_id', $procedimentoId);
+                            $stmt->execute();
+                        } else {
+                            // "Todos" selecionado sem profissional - bloquear para cílios (ID 3) e lábios (ID 4)
+                            $procedimentosTodos = [3, 4]; // Cílios e Lábios
+                            foreach ($procedimentosTodos as $procId) {
+                                $stmt = $conn->prepare('DELETE FROM horarios_disponiveis WHERE data = :data AND hora = :hora AND procedimento_id = :procedimento_id');
+                                $stmt->bindParam(':data', $data);
+                                $stmt->bindParam(':hora', $hora);
+                                $stmt->bindParam(':procedimento_id', $procId);
+                                $stmt->execute();
+                            }
+                        }
                     }
-                    $stmt->execute();
                 }
             }
 
@@ -397,12 +456,29 @@ class HorariosController {
                     data DATE NOT NULL,
                     hora TIME NOT NULL,
                     profissional_id INT UNSIGNED NULL,
+                    procedimento_id INT UNSIGNED NULL,
                     status ENUM('livre','reservado','bloqueado') NOT NULL DEFAULT 'livre',
                     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY uniq_data_hora_prof (data, hora, profissional_id)
+                    UNIQUE KEY uniq_data_hora_prof_proc (data, hora, profissional_id, procedimento_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ";
             $conn->exec($createTable);
+        } else {
+            // Verificar se a coluna procedimento_id existe, se não, adicionar
+            $stmt = $conn->prepare("SHOW COLUMNS FROM horarios_disponiveis LIKE 'procedimento_id'");
+            $stmt->execute();
+            if ($stmt->rowCount() === 0) {
+                $conn->exec("ALTER TABLE horarios_disponiveis ADD COLUMN procedimento_id INT UNSIGNED NULL AFTER profissional_id");
+            }
+
+            // Verificar se a constraint única inclui procedimento_id, se não, recriar
+            $stmt = $conn->prepare("SHOW INDEX FROM horarios_disponiveis WHERE Key_name = 'uniq_data_hora_prof'");
+            $stmt->execute();
+            if ($stmt->rowCount() > 0) {
+                // Remover constraint antiga e criar nova
+                $conn->exec("ALTER TABLE horarios_disponiveis DROP INDEX uniq_data_hora_prof");
+                $conn->exec("ALTER TABLE horarios_disponiveis ADD UNIQUE KEY uniq_data_hora_prof_proc (data, hora, profissional_id, procedimento_id)");
+            }
         }
     }
 
