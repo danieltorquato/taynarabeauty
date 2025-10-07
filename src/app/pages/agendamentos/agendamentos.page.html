@@ -32,6 +32,15 @@
     <div class="form-section">
       <h3>Informações do Agendamento</h3>
 
+      <!-- Mensagem especial para profissionais -->
+      <div *ngIf="authService.isAuthenticated && authService.currentUser?.role === 'profissional'" class="professional-notice">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <div class="notice-content">
+          <h4>Agendamento para Profissional</h4>
+          <p>Você está agendando um procedimento para você mesmo. Selecione "Sem preferência" para agendamento automático ou escolha outro profissional.</p>
+        </div>
+      </div>
+
       <ion-list lines="none" class="card">
         <!-- Procedimento -->
         <div class="procedimento-section">

@@ -390,3 +390,37 @@ ion-card-content {
     margin-top: 5px;
   }
 }
+
+// Cards de ação para profissionais
+.action-card {
+  background: linear-gradient(135deg, #fff, #f8f9fa);
+  border: 2px solid #e9ecef;
+  border-radius: 15px;
+  margin: 10px 0;
+  transition: all 0.3s ease;
+  height: 100%;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: #9e4a7a;
+  }
+
+  ion-card-title {
+    color: #9e4a7a;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+
+  .action-description {
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 15px;
+    line-height: 1.4;
+  }
+
+  ion-button {
+    margin-top: auto;
+    font-weight: 600;
+  }
+}

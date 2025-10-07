@@ -35,6 +35,11 @@ cp -r dist/* www/
 echo "✓ Arquivos copiados para www"
 
 echo
+echo "[5/5] Copiando arquivos de configuração..."
+cp .htaccess www/
+echo "✓ Arquivo .htaccess copiado"
+
+echo
 echo "========================================"
 echo "   BUILD CONCLUIDO COM SUCESSO!"
 echo "========================================"

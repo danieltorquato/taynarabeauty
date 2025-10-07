@@ -26,8 +26,8 @@ class ProfissionaisController {
                     // Filtrar profissionais por especialização baseada no procedimento
                     $profissionais = $this->getProfissionaisPorProcedimento($conn, $procedimentoId);
                 } else {
-                    // Se não há procedimentoId, retornar lista vazia (não mostrar ninguém)
-                    $profissionais = [];
+                    // Se não há procedimentoId, retornar todos os profissionais ativos
+                    $profissionais = $this->getTodosProfissionais($conn);
                 }
 
                 // Adicionar fotos de exemplo
@@ -83,6 +83,26 @@ class ProfissionaisController {
         return $profissionais;
     }
 
+    private function getTodosProfissionais($conn) {
+        // Buscar todos os profissionais ativos
+        $stmt = $conn->prepare('
+            SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome, p.almoco_inicio, p.almoco_fim
+            FROM profissionais p
+            LEFT JOIN usuarios u ON p.usuario_id = u.id
+            WHERE p.ativo = 1
+            ORDER BY p.nome
+        ');
+        $stmt->execute();
+        $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Se não há profissionais na tabela, retornar dados demo
+        if (empty($profissionais)) {
+            return $this->getProfissionaisDemo(null);
+        }
+
+        return $profissionais;
+    }
+
     private function getProfissionaisHardcoded($conn, $procedimentoId) {
         // Lógica de especialização hardcoded como fallback
         $profissionais = [];
@@ -128,9 +148,13 @@ class ProfissionaisController {
     private function getProfissionaisDemo($procedimentoId) {
         $profissionais = [];
 
-        // Se não há procedimentoId, retornar lista vazia (não mostrar ninguém)
+        // Se não há procedimentoId, retornar todos os profissionais demo
         if (!$procedimentoId) {
-            return $profissionais;
+            return [
+                ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara', 'competencias' => [1, 2, 3, 5, 6], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00'],
+                ['id' => 2, 'nome' => 'Mayara Casagrande', 'usuario_id' => 4, 'usuario_nome' => 'Mayara', 'competencias' => [4], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00'],
+                ['id' => 3, 'nome' => 'Sara Casagrande', 'usuario_id' => 5, 'usuario_nome' => 'Sara', 'competencias' => [4], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00']
+            ];
         }
 
         // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)

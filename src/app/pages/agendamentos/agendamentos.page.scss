@@ -1141,3 +1141,40 @@ ion-chip.active {
     text-shadow: 0 1px 3px rgba(242, 140, 180, 0.3);
   }
 }
+
+// Mensagem especial para profissionais
+.professional-notice {
+  background: linear-gradient(135deg, #e8f4fd, #d1ecf1);
+  border: 2px solid #bee5eb;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  ion-icon {
+    color: #0c5460;
+    font-size: 1.2rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .notice-content {
+    flex: 1;
+
+    h4 {
+      color: #0c5460;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+    }
+
+    p {
+      color: #0c5460;
+      font-size: 0.95rem;
+      margin: 0;
+      line-height: 1.4;
+    }
+  }
+}

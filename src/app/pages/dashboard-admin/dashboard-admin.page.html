@@ -1,112 +1,304 @@
 <ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Gestão da Agenda</ion-title>
+  <ion-toolbar class="custom-toolbar">
+    <ion-title class="toolbar-title">
+      <div class="title-content">
+        <ion-icon name="calendar-outline" class="title-icon"></ion-icon>
+        <span>Gestão da Agenda</span>
+      </div>
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="dashboard-content">
   <div class="admin-container">
-
-    <!-- Seletor de Data e Configurações -->
-    <ion-card class="date-card">
-      <ion-card-content>
-        <ion-item>
-          <ion-label position="stacked">Selecionar Data</ion-label>
-          <ion-input type="date" [(ngModel)]="selectedDate" (ionInput)="onDateChange()"></ion-input>
-        </ion-item>
-
-        <!-- Seção de Liberação Rápida -->
-        <div class="quick-actions">
-          <h4>Liberação Rápida</h4>
-          <div class="action-buttons">
-            <ion-button size="small" (click)="liberarTodosHorarios()">
-              📅 Liberar Todos
-            </ion-button>
-            <ion-button size="small" color="danger" (click)="bloquearTodosHorarios()">
-              🚫 Bloquear Todos
-            </ion-button>
+    <!-- Header Section -->
+    <div class="dashboard-header">
+      <div class="header-content">
+        <h1 class="dashboard-title">Painel de Controle</h1>
+        <p class="dashboard-subtitle">Gerencie horários e agendamentos de forma eficiente</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-info">
+            <span class="stat-number">{{ profissionais.length }}</span>
+            <span class="stat-label">Profissionais</span>
           </div>
         </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-info">
+            <span class="stat-number">{{ agendamentosData.length }}</span>
+            <span class="stat-label">Agendamentos</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <!-- Seção de Liberação Específica -->
-        <div class="specific-actions">
-          <h4>Liberação Específica</h4>
+    <!-- Seletor de Data e Configurações -->
+    <div class="controls-section">
+      <ion-card class="date-card">
+        <ion-card-header>
+          <ion-card-title class="card-title">
+            <ion-icon name="calendar-outline"></ion-icon>
+            Configurações da Agenda
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <div class="date-selector">
+            <ion-item class="custom-item">
+              <ion-label position="stacked" class="custom-label">📅 Selecionar Data</ion-label>
+              <ion-input
+                type="date"
+                [(ngModel)]="selectedDate"
+                (ionInput)="onDateChange()"
+                class="custom-input">
+              </ion-input>
+            </ion-item>
+          </div>
 
-          <ion-item>
-            <ion-label position="stacked">Profissional</ion-label>
-            <ion-select [(ngModel)]="selectedProfissional" (ionChange)="onProfissionalChange()" placeholder="Selecionar profissional">
-              <ion-select-option value="0">Todos os profissionais</ion-select-option>
-              <ion-select-option *ngFor="let prof of profissionais" [value]="prof.id">
-                {{ prof.nome }}
-              </ion-select-option>
-            </ion-select>
-          </ion-item>
+          <!-- Seção de Liberação Rápida -->
+          <div class="quick-actions">
+            <h4 class="section-title">
+              <ion-icon name="flash-outline"></ion-icon>
+              Ações Rápidas
+            </h4>
+            <div class="action-buttons">
+              <ion-button
+                class="action-btn success-btn"
+                (click)="liberarTodosHorarios()"
+                [disabled]="loadingAgendamentos || liberarTodosConfirmando">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                <span *ngIf="!liberarTodosConfirmando">Liberar Todos</span>
+                <span *ngIf="liberarTodosConfirmando">Processando...</span>
+              </ion-button>
+              <ion-button
+                class="action-btn danger-btn"
+                (click)="bloquearTodosHorarios()"
+                [disabled]="loadingAgendamentos || bloquearTodosConfirmando">
+                <ion-icon name="close-circle-outline"></ion-icon>
+                <span *ngIf="!bloquearTodosConfirmando">Bloquear Todos</span>
+                <span *ngIf="bloquearTodosConfirmando">Processando...</span>
+              </ion-button>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
 
-          <ion-item>
-            <ion-label position="stacked">Procedimento</ion-label>
-            <ion-select [(ngModel)]="selectedProcedimento" (ionChange)="onProcedimentoChange()" placeholder="Selecionar procedimento">
-              <ion-select-option value="0">Todos os procedimentos</ion-select-option>
-              <ion-select-option *ngFor="let proc of procedimentosFiltrados" [value]="proc.id">
-                {{ proc.nome }}
-              </ion-select-option>
-            </ion-select>
-          </ion-item>
+      <!-- Seção de Filtros -->
+      <ion-card class="filters-card">
+        <ion-card-header>
+          <ion-card-title class="card-title">
+            <ion-icon name="filter-outline"></ion-icon>
+            Filtros e Configurações
+          </ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <!-- Seleção de Profissional -->
+          <div class="filter-section">
+            <ion-label class="section-label">
+              <ion-icon name="person-outline"></ion-icon>
+              Escolha o Profissional
+            </ion-label>
+            <div class="profissionais-grid">
+              <!-- Opção "Todos" -->
+              <div
+                class="profissional-card"
+                [class.selected]="selectedProfissional === '0'"
+                (click)="selectProfissional('0')">
+                <div class="profissional-avatar">
+                  <ion-icon name="people-outline"></ion-icon>
+                </div>
+                <span class="profissional-name">Todos</span>
+              </div>
+
+              <!-- Profissionais -->
+              <div
+                *ngFor="let prof of profissionais"
+                class="profissional-card"
+                [class.selected]="selectedProfissional === prof.id.toString()"
+                (click)="selectProfissional(prof.id.toString())">
+                <div class="profissional-avatar">
+                  <img *ngIf="prof.foto" [src]="prof.foto" [alt]="prof.nome">
+                  <ion-icon *ngIf="!prof.foto" name="person-outline"></ion-icon>
+                </div>
+                <span class="profissional-name">{{ prof.nome }}</span>
+              </div>
+
+              <div *ngIf="loadingProfissionais" class="loading-indicator">
+                <ion-spinner name="crescent"></ion-spinner>
+                <span>Carregando profissionais...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seleção de Procedimento -->
+          <div class="filter-section">
+            <ion-label class="section-label">
+              <ion-icon name="medical-outline"></ion-icon>
+              Escolha o Procedimento
+            </ion-label>
+            <div class="procedimentos-grid">
+              <!-- Opção "Todos" -->
+              <div
+                class="procedimento-card"
+                [class.selected]="selectedProcedimento === '0'"
+                (click)="selectProcedimento('0')">
+                <div class="procedimento-icon">
+                  <ion-icon name="grid-outline"></ion-icon>
+                </div>
+                <span class="procedimento-label">Todos</span>
+              </div>
+
+              <!-- Procedimentos filtrados -->
+              <div
+                *ngFor="let procedimento of procedimentosFiltrados"
+                class="procedimento-card"
+                [class.selected]="selectedProcedimento === procedimento.id.toString()"
+                (click)="selectProcedimento(procedimento.id.toString())">
+                <div class="procedimento-icon">
+                  <ion-icon [name]="getProcedimentoIcon(procedimento.categoria)"></ion-icon>
+                </div>
+                <span class="procedimento-label">{{ procedimento.nome }}</span>
+              </div>
+
+              <div *ngIf="loadingProcedimentos" class="loading-indicator">
+                <ion-spinner name="crescent"></ion-spinner>
+                <span>Carregando procedimentos...</span>
+              </div>
+            </div>
+          </div>
 
           <!-- Indicador de filtro ativo -->
           <div *ngIf="selectedProfissional !== '0' && procedimentosFiltrados.length < procedimentos.length" class="filter-indicator">
             <small>📋 Mostrando apenas procedimentos que {{ getProfissionalNome() }} pode realizar</small>
           </div>
 
-          <ion-item>
-            <ion-label position="stacked">Horário Inicial</ion-label>
-            <ion-input type="time" [(ngModel)]="horarioInicial" placeholder="08:00"></ion-input>
-          </ion-item>
+          <div class="time-range">
+            <div class="time-inputs">
+              <ion-item class="custom-item">
+                <ion-label position="stacked" class="custom-label">
+                  <ion-icon name="time-outline"></ion-icon>
+                  Horário Inicial
+                </ion-label>
+                <ion-input
+                  type="time"
+                  [(ngModel)]="horarioInicial"
+                  placeholder="08:00"
+                  class="custom-input">
+                </ion-input>
+              </ion-item>
 
-          <ion-item>
-            <ion-label position="stacked">Horário Final</ion-label>
-            <ion-input type="time" [(ngModel)]="horarioFinal" placeholder="18:00"></ion-input>
-          </ion-item>
+              <ion-item class="custom-item">
+                <ion-label position="stacked" class="custom-label">
+                  <ion-icon name="time-outline"></ion-icon>
+                  Horário Final
+                </ion-label>
+                <ion-input
+                  type="time"
+                  [(ngModel)]="horarioFinal"
+                  placeholder="18:00"
+                  class="custom-input">
+                </ion-input>
+              </ion-item>
+            </div>
 
-          <div class="specific-action-buttons">
-            <ion-button expand="block" color="success" (click)="liberarHorariosEspecificos()">
-              ✅ Liberar Horários Específicos
-            </ion-button>
-            <ion-button expand="block" color="warning" (click)="liberarSemanaEspecifica()">
-              📆 Liberar Semana (Profissional + Procedimento)
-            </ion-button>
+            <div class="specific-action-buttons">
+              <ion-button
+                class="specific-action-btn success-btn"
+                expand="block"
+                (click)="liberarHorariosEspecificos()">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                Liberar Horários Específicos
+              </ion-button>
+              <ion-button
+                class="specific-action-btn warning-btn"
+                expand="block"
+                (click)="liberarSemanaEspecifica()">
+                <ion-icon name="calendar-outline"></ion-icon>
+                Liberar Semana (Profissional + Procedimento)
+              </ion-button>
+            </div>
           </div>
-        </div>
+        </ion-card-content>
+      </ion-card>
 
-        <!-- Indicador de alterações pendentes -->
-        <div *ngIf="hasUnsavedChanges" class="pending-changes">
-          <p>⚠️ {{ pendingChanges.length }} alteração(ões) pendente(s)</p>
-          <div class="save-actions">
-            <ion-button expand="block" color="success" (click)="salvarAlteracoes()">
-              💾 Salvar Alterações
-            </ion-button>
-            <ion-button expand="block" fill="outline" color="medium" (click)="descartarAlteracoes()">
-              ↩️ Descartar
-            </ion-button>
+      <!-- Indicador de alterações pendentes -->
+      <ion-card *ngIf="hasUnsavedChanges" class="pending-changes-card">
+        <ion-card-content>
+          <div class="pending-changes">
+            <div class="pending-info">
+              <ion-icon name="warning-outline" class="warning-icon"></ion-icon>
+              <div class="pending-text">
+                <h4>{{ pendingChanges.length }} alteração(ões) pendente(s)</h4>
+                <p>Salve as alterações para aplicá-las à agenda</p>
+              </div>
+            </div>
+            <div class="save-actions">
+              <ion-button
+                class="save-btn"
+                expand="block"
+                (click)="salvarAlteracoes()">
+                <ion-icon name="save-outline"></ion-icon>
+                Salvar Alterações
+              </ion-button>
+              <ion-button
+                class="discard-btn"
+                expand="block"
+                fill="outline"
+                (click)="descartarAlteracoes()">
+                <ion-icon name="close-outline"></ion-icon>
+                Descartar
+              </ion-button>
+            </div>
           </div>
-        </div>
-      </ion-card-content>
-    </ion-card>
+        </ion-card-content>
+      </ion-card>
 
     <!-- Grade de Horários -->
     <ion-card class="schedule-card">
       <ion-card-header>
-        <ion-card-title>Horários - {{ selectedDate }}</ion-card-title>
-        <p>Clique nos horários para liberar/bloquear</p>
-        <div *ngIf="selectedProfissional !== '0' || selectedProcedimento !== '0'" class="professional-filter-indicator">
-          <small>
-            <span *ngIf="selectedProfissional !== '0'">👤 <strong>{{ getProfissionalNome() }}</strong></span>
-            <span *ngIf="selectedProfissional !== '0' && selectedProcedimento !== '0'"> • </span>
-            <span *ngIf="selectedProcedimento !== '0'">💄 <strong>{{ getProcedimentoCategoria() }}</strong></span>
-          </small>
+        <ion-card-title class="card-title">
+          <ion-icon name="grid-outline"></ion-icon>
+          Agenda - {{ formatDate(selectedDate) }}
+        </ion-card-title>
+               <div class="schedule-info">
+                 <p class="schedule-description">Clique nos horários para liberar/bloquear</p>
+                 <div *ngIf="selectedProfissional !== '0' || selectedProcedimento !== '0'" class="professional-filter-indicator">
+                   <ion-icon name="person-outline"></ion-icon>
+                   <span *ngIf="selectedProfissional !== '0'"><strong>{{ getProfissionalNome() }}</strong></span>
+                   <span *ngIf="selectedProfissional !== '0' && selectedProcedimento !== '0'"> • </span>
+                   <span *ngIf="selectedProcedimento !== '0'"><strong>{{ getProcedimentoCategoria() }}</strong></span>
+                 </div>
+                 <div *ngIf="selectedProcedimento !== '0'" class="procedimento-info">
+                   <ion-icon name="time-outline"></ion-icon>
+                   <span>Duração: {{ getProcedimentoDuracao(selectedProcedimento) }} minutos</span>
+                 </div>
+               </div>
+        <div class="schedule-stats">
+          <div class="stat-item">
+            <span class="stat-number">{{ getAvailableSlots() }}</span>
+            <span class="stat-label">Disponíveis</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ getBookedSlots() }}</span>
+            <span class="stat-label">Agendados</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number">{{ getBlockedSlots() }}</span>
+            <span class="stat-label">Bloqueados</span>
+          </div>
         </div>
       </ion-card-header>
       <ion-card-content>
-        <div class="time-grid">
+        <!-- Loading state -->
+        <div *ngIf="loadingAgendamentos" class="loading-container">
+          <ion-spinner name="crescent"></ion-spinner>
+          <p>Carregando horários...</p>
+        </div>
+
+        <!-- Time grid -->
+        <div *ngIf="!loadingAgendamentos" class="time-grid">
           <div *ngFor="let slot of timeSlots"
                class="time-slot"
                [class.available]="slot.status === 'livre'"
@@ -161,6 +353,4 @@
         </ion-list>
       </ion-card-content>
     </ion-card>
-
-  </div>
-</ion-content>
+    <!-- Removido fechamento duplicado de </ion-content> -->

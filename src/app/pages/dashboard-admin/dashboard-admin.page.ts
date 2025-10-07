@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonItem, IonLabel, IonInput, IonList, IonSelect, IonSelectOption } from '@ionic/angular/standalone';
+import { IonContent, IonHeader, IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonItem, IonLabel, IonInput, IonList, IonSelect, IonSelectOption, IonSpinner, IonIcon, AlertController } from '@ionic/angular/standalone';
 import { ApiService } from '../../services/api.service';
 
 interface TimeSlot {
@@ -18,9 +18,9 @@ interface TimeSlot {
   templateUrl: './dashboard-admin.page.html',
   styleUrls: ['./dashboard-admin.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonItem, IonLabel, IonInput, IonList, IonSelect, IonSelectOption, CommonModule, FormsModule]
+  imports: [IonIcon, IonContent, IonHeader, IonTitle, IonToolbar, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonItem, IonLabel, IonInput, IonList, IonSpinner, CommonModule, FormsModule]
 })
-export class DashboardAdminPage implements OnInit {
+export class DashboardAdminPage implements OnInit, OnDestroy {
   selectedDate = new Date().toISOString().split('T')[0];
   agendamentosData: any[] = [];
   timeSlots: TimeSlot[] = [];
@@ -36,13 +36,108 @@ export class DashboardAdminPage implements OnInit {
   horarioInicial = '08:00';
   horarioFinal = '18:00';
 
-  constructor(private api: ApiService) { }
+  // Estados de loading
+  loadingProfissionais = true;
+  loadingProcedimentos = true;
+  loadingAgendamentos = true;
+
+  // Estados para confirmação com delay
+  liberarTodosConfirmando = false;
+  bloquearTodosConfirmando = false;
+  liberarTodosCountdown = 0;
+  bloquearTodosCountdown = 0;
+  liberarTodosInterval: any = null;
+  bloquearTodosInterval: any = null;
+
+  // Mapa de durações dos procedimentos (em minutos)
+  procedimentoDuracoes: { [key: string]: number } = {
+    'cilios': 60,      // 1 hora
+    'labios': 90,      // 1.5 horas
+    'combo': 150,      // 2.5 horas (cílios + lábios)
+    'sobrancelhas': 45, // 45 minutos
+    'micropigmentacao': 120, // 2 horas
+    'permanente': 60,   // 1 hora
+    'tintura': 30       // 30 minutos
+  };
+
+  constructor(private api: ApiService, private alertController: AlertController) { }
 
   ngOnInit() {
     this.generateTimeSlots();
     this.loadAgendamentos();
     this.loadProfissionais();
     this.loadProcedimentos();
+  }
+
+  ngOnDestroy() {
+    // Limpar intervalos para evitar vazamentos de memória
+    this.clearLiberarTodosInterval();
+    this.clearBloquearTodosInterval();
+  }
+
+  // Mostrar alert com loading e confirmação após 5 segundos
+  async showConfirmationAlert(
+    title: string,
+    message: string,
+    confirmText: string,
+    action: () => void
+  ) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      backdropDismiss: false,
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel',
+          handler: () => {
+            // Resetar estados se cancelar
+            this.liberarTodosConfirmando = false;
+            this.bloquearTodosConfirmando = false;
+            this.liberarTodosCountdown = 0;
+            this.bloquearTodosCountdown = 0;
+          }
+        }
+      ]
+    });
+
+    await alert.present();
+
+    // Aguardar 5 segundos antes de mostrar o botão de confirmação
+    let countdown = 5;
+    const countdownInterval = setInterval(() => {
+      countdown--;
+
+      // Atualizar a mensagem do alert com countdown
+      alert.message = `${message}\n\n⏳ Aguarde ${countdown} segundos para confirmar...`;
+
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+
+        // Adicionar botão de confirmação após 5 segundos
+        alert.buttons = [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            handler: () => {
+              this.liberarTodosConfirmando = false;
+              this.bloquearTodosConfirmando = false;
+              this.liberarTodosCountdown = 0;
+              this.bloquearTodosCountdown = 0;
+            }
+          },
+          {
+            text: confirmText,
+            handler: () => {
+              action();
+            }
+          }
+        ];
+
+        // Atualizar a mensagem final
+        alert.message = `${message}\n\n✅ Pronto! Clique em "${confirmText}" para confirmar.`;
+      }
+    }, 1000);
   }
 
   generateTimeSlots() {
@@ -55,26 +150,55 @@ export class DashboardAdminPage implements OnInit {
 
     while (currentTime <= endTime) {
       const timeString = currentTime.toTimeString().substring(0, 5);
+
+      // Verificar se há agendamento neste horário
+      const agendamento = this.agendamentosData.find(ag => ag.hora === timeString);
+
+      // Verificar conflitos baseado na duração do procedimento selecionado
+      let status: 'livre' | 'bloqueado' | 'ocupado' = 'bloqueado'; // Padrão bloqueado
+      let hasConflict = false;
+
+      if (agendamento) {
+        status = 'ocupado';
+      } else if (this.selectedProcedimento !== '0') {
+        // Verificar se há conflito de duração
+        hasConflict = this.hasTimeConflict(timeString, this.selectedProcedimento);
+        if (hasConflict) {
+          status = 'bloqueado';
+        } else {
+          status = 'livre';
+        }
+      }
+
       this.timeSlots.push({
         time: timeString,
-        status: 'bloqueado', // Por padrão, bloqueado até ser liberado
-        originalStatus: 'bloqueado',
+        status: status,
+        originalStatus: status,
+        cliente: agendamento?.cliente_nome,
+        agendamento_id: agendamento?.id,
         hasChanges: false
       });
+
       currentTime.setMinutes(currentTime.getMinutes() + 15);
     }
   }
 
   loadAgendamentos() {
+    this.loadingAgendamentos = true;
     this.api.getAdminAgendamentos(this.selectedDate).subscribe({
       next: (res) => {
+        this.loadingAgendamentos = false;
         if (res.success) {
           this.agendamentosData = res.agendamentos;
-          this.updateTimeSlotStatus();
+          // Regenerar horários considerando conflitos de duração
+          this.generateTimeSlots();
         }
       },
       error: (err) => {
+        this.loadingAgendamentos = false;
         console.error('Erro ao carregar agendamentos:', err);
+        // Em caso de erro, regenerar horários mesmo assim
+        this.generateTimeSlots();
       }
     });
   }
@@ -161,7 +285,23 @@ export class DashboardAdminPage implements OnInit {
     this.updatePendingChanges();
   }
 
-  liberarTodosHorarios() {
+  async liberarTodosHorarios() {
+    if (!this.liberarTodosConfirmando) {
+      // Iniciar processo de confirmação
+      this.liberarTodosConfirmando = true;
+
+      const title = '⚠️ CONFIRMAÇÃO NECESSÁRIA';
+      const message = `Você está prestes a LIBERAR TODOS os horários do dia ${this.selectedDate}.\n\nEsta ação irá:\n• Liberar TODOS os horários disponíveis\n• Pode afetar a agenda de todos os profissionais\n• É uma ação IRREVERSÍVEL`;
+      const confirmText = 'SIM, LIBERAR TODOS';
+
+      await this.showConfirmationAlert(title, message, confirmText, () => {
+        this.executeLiberarTodos();
+        this.liberarTodosConfirmando = false;
+      });
+    }
+  }
+
+  private executeLiberarTodos() {
     this.timeSlots.forEach(slot => {
       if (slot.originalStatus !== 'ocupado') {
         // Verificar se o horário está no período de almoço do profissional selecionado
@@ -176,9 +316,34 @@ export class DashboardAdminPage implements OnInit {
       }
     });
     this.updatePendingChanges();
+    this.liberarTodosConfirmando = false;
+    this.liberarTodosCountdown = 0;
   }
 
-  bloquearTodosHorarios() {
+  private clearLiberarTodosInterval() {
+    if (this.liberarTodosInterval) {
+      clearInterval(this.liberarTodosInterval);
+      this.liberarTodosInterval = null;
+    }
+  }
+
+  async bloquearTodosHorarios() {
+    if (!this.bloquearTodosConfirmando) {
+      // Iniciar processo de confirmação
+      this.bloquearTodosConfirmando = true;
+
+      const title = '⚠️ CONFIRMAÇÃO NECESSÁRIA';
+      const message = `Você está prestes a BLOQUEAR TODOS os horários do dia ${this.selectedDate}.\n\nEsta ação irá:\n• Bloquear TODOS os horários disponíveis\n• Impedir novos agendamentos\n• É uma ação IRREVERSÍVEL`;
+      const confirmText = 'SIM, BLOQUEAR TODOS';
+
+      await this.showConfirmationAlert(title, message, confirmText, () => {
+        this.executeBloquearTodos();
+        this.bloquearTodosConfirmando = false;
+      });
+    }
+  }
+
+  private executeBloquearTodos() {
     this.timeSlots.forEach(slot => {
       if (slot.originalStatus !== 'ocupado') {
         slot.status = 'bloqueado';
@@ -186,6 +351,15 @@ export class DashboardAdminPage implements OnInit {
       }
     });
     this.updatePendingChanges();
+    this.bloquearTodosConfirmando = false;
+    this.bloquearTodosCountdown = 0;
+  }
+
+  private clearBloquearTodosInterval() {
+    if (this.bloquearTodosInterval) {
+      clearInterval(this.bloquearTodosInterval);
+      this.bloquearTodosInterval = null;
+    }
   }
 
   updatePendingChanges() {
@@ -269,9 +443,12 @@ export class DashboardAdminPage implements OnInit {
 
   // Novos métodos para liberação específica
   loadProfissionais() {
+    this.loadingProfissionais = true;
     console.log('Carregando profissionais...');
+    // Carregar todos os profissionais sem filtro
     this.api.getProfissionais().subscribe({
       next: (res) => {
+        this.loadingProfissionais = false;
         console.log('Resposta da API de profissionais:', res);
         if (res.success) {
           this.profissionais = res.profissionais;
@@ -280,27 +457,64 @@ export class DashboardAdminPage implements OnInit {
           this.procedimentosFiltrados = [...this.procedimentos];
         } else {
           console.error('Erro na resposta da API:', res.message);
+          // Fallback: criar lista de profissionais hardcoded
+          this.profissionais = [
+            { id: 1, nome: 'Taynara Casagrande', competencias: [1, 2, 3, 5, 6], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
+            { id: 2, nome: 'Mayara Casagrande', competencias: [4], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
+            { id: 3, nome: 'Sara Casagrande', competencias: [4], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' }
+          ];
         }
       },
       error: (err) => {
+        this.loadingProfissionais = false;
         console.error('Erro ao carregar profissionais:', err);
+        // Fallback: criar lista de profissionais hardcoded
+        this.profissionais = [
+          { id: 1, nome: 'Taynara Casagrande', competencias: [1, 2, 3, 5, 6], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
+          { id: 2, nome: 'Mayara Casagrande', competencias: [4], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
+          { id: 3, nome: 'Sara Casagrande', competencias: [4], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' }
+        ];
       }
     });
   }
 
   loadProcedimentos() {
+    this.loadingProcedimentos = true;
     this.api.getProcedimentos().subscribe({
       next: (res) => {
+        this.loadingProcedimentos = false;
         if (res.success) {
           this.procedimentos = res.procedimentos;
-          // Inicializar com todos os procedimentos
-          this.procedimentosFiltrados = [...this.procedimentos];
+          // Aplicar filtro baseado no profissional selecionado
+          this.filtrarProcedimentos();
         }
       },
       error: (err) => {
+        this.loadingProcedimentos = false;
         console.error('Erro ao carregar procedimentos:', err);
+        // Em caso de erro, mostrar todos os procedimentos
+        this.procedimentosFiltrados = [...this.procedimentos];
       }
     });
+  }
+
+  selectProfissional(profissionalId: string) {
+    this.selectedProfissional = profissionalId;
+    console.log('Profissional selecionado:', this.selectedProfissional);
+    this.filtrarProcedimentos();
+    // Reset procedimento selecionado quando mudar profissional
+    this.selectedProcedimento = '0';
+    // Recarregar horários com o filtro do profissional
+    this.loadAgendamentos();
+  }
+
+  selectProcedimento(procedimentoId: string) {
+    this.selectedProcedimento = procedimentoId;
+    console.log('Procedimento selecionado:', this.selectedProcedimento);
+    // Regenerar horários considerando conflitos de duração
+    this.generateTimeSlots();
+    // Recarregar agendamentos para atualizar dados
+    this.loadAgendamentos();
   }
 
   onProfissionalChange() {
@@ -325,9 +539,6 @@ export class DashboardAdminPage implements OnInit {
       console.log('Mostrando todos os procedimentos:', this.procedimentosFiltrados.length);
     } else {
       // Buscar procedimentos que o profissional selecionado pode realizar
-      const profissionalId = parseInt(this.selectedProfissional);
-
-      // Buscar o profissional selecionado na lista local (usar string)
       const profissional = this.profissionais.find(p => String(p.id) === this.selectedProfissional);
       console.log('Profissional encontrado para filtro:', profissional);
 
@@ -338,10 +549,41 @@ export class DashboardAdminPage implements OnInit {
         );
         console.log('Filtrado por competências:', this.procedimentosFiltrados.length);
       } else {
-        // Fallback para lógica hardcoded
+        // Fallback para lógica hardcoded baseada na categoria
         this.procedimentosFiltrados = this.getProcedimentosPorProfissional(profissional);
         console.log('Filtrado por lógica hardcoded:', this.procedimentosFiltrados.length);
         console.log('Procedimentos filtrados:', this.procedimentosFiltrados);
+      }
+    }
+
+    // Para combo, adicionar procedimentos individuais se o profissional pode fazer ambos
+    this.addComboIndividualProcedures();
+  }
+
+  // Adicionar procedimentos individuais para combo e remover combo da lista
+  private addComboIndividualProcedures() {
+    const comboProcedimento = this.procedimentos.find(p => p.categoria === 'combo');
+    if (!comboProcedimento) return;
+
+    // Verificar se o profissional pode fazer combo (pode fazer cílios E lábios)
+    const ciliosProcedimento = this.procedimentos.find(p => p.categoria === 'cilios');
+    const labiosProcedimento = this.procedimentos.find(p => p.categoria === 'labios');
+
+    if (ciliosProcedimento && labiosProcedimento) {
+      // Se o profissional pode fazer combo, adicionar procedimentos individuais
+      const canDoCombo = this.procedimentosFiltrados.some(p => p.categoria === 'combo');
+
+      if (canDoCombo) {
+        // Adicionar procedimentos individuais se não estiverem já na lista
+        if (!this.procedimentosFiltrados.some(p => p.categoria === 'cilios')) {
+          this.procedimentosFiltrados.push(ciliosProcedimento);
+        }
+        if (!this.procedimentosFiltrados.some(p => p.categoria === 'labios')) {
+          this.procedimentosFiltrados.push(labiosProcedimento);
+        }
+
+        // Remover combo da lista de procedimentos filtrados
+        this.procedimentosFiltrados = this.procedimentosFiltrados.filter(p => p.categoria !== 'combo');
       }
     }
   }
@@ -422,7 +664,7 @@ export class DashboardAdminPage implements OnInit {
     }
 
     const procedimentoId = parseInt(this.selectedProcedimento);
-    const procedimento = this.procedimentos.find(p => p.id === procedimentoId);
+    const procedimento = this.procedimentosFiltrados.find(p => p.id === procedimentoId);
 
     if (!procedimento) return 'desconhecido';
 
@@ -581,5 +823,114 @@ export class DashboardAdminPage implements OnInit {
     const horas = parseInt(partes[0], 10);
     const minutos = parseInt(partes[1], 10);
     return horas * 60 + minutos;
+  }
+
+  // Métodos para estatísticas da agenda
+  getAvailableSlots() {
+    return this.timeSlots.filter(slot => slot.status === 'livre').length;
+  }
+
+  getBookedSlots() {
+    return this.timeSlots.filter(slot => slot.status === 'ocupado').length;
+  }
+
+  getBlockedSlots() {
+    return this.timeSlots.filter(slot => slot.status === 'bloqueado').length;
+  }
+
+  formatDate(dateString: string) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  getProcedimentoIdByCategoria(categoria: string): number {
+    if (categoria === 'combo') {
+      const procedimento = this.procedimentos.find(p => p.categoria === 'combo' || p.nome.toLowerCase().includes('combo'));
+      return procedimento ? procedimento.id : 0;
+    }
+    const procedimento = this.procedimentos.find(p => p.categoria === categoria);
+    return procedimento ? procedimento.id : 0;
+  }
+
+  getProcedimentoIcon(categoria: string): string {
+    const iconMap: { [key: string]: string } = {
+      'cilios': 'eye-outline',
+      'labios': 'eyedrop-outline',
+      'combo': 'layers-outline',
+      'sobrancelhas': 'eye-outline',
+      'micropigmentacao': 'color-palette-outline',
+      'permanente': 'flash-outline',
+      'tintura': 'brush-outline'
+    };
+
+    return iconMap[categoria] || 'medical-outline';
+  }
+
+  // Verificar se um horário tem conflito baseado na duração do procedimento
+  hasTimeConflict(timeSlot: string, procedimentoId: string): boolean {
+    if (procedimentoId === '0') return false; // "Todos" não tem conflito
+
+    const procedimento = this.procedimentosFiltrados.find(p => p.id.toString() === procedimentoId);
+    if (!procedimento) return false;
+
+    const duracao = this.procedimentoDuracoes[procedimento.categoria] || 60; // Default 60 min
+    const [hours, minutes] = timeSlot.split(':').map(Number);
+    const startTime = hours * 60 + minutes; // converter para minutos
+    const endTime = startTime + duracao;
+
+    // Verificar se o horário final ultrapassa o horário de trabalho (18:00)
+    const ultimoHorario = 18 * 60; // 18:00 em minutos
+    if (endTime > ultimoHorario) {
+      return true;
+    }
+
+    // Verificar conflitos com agendamentos existentes
+    return this.checkConflictWithExistingAppointments(timeSlot, duracao);
+  }
+
+  // Verificar conflitos com agendamentos existentes
+  private checkConflictWithExistingAppointments(timeSlot: string, duracao: number): boolean {
+    const [hours, minutes] = timeSlot.split(':').map(Number);
+    const startTime = hours * 60 + minutes;
+    const endTime = startTime + duracao;
+
+    // Verificar conflitos com agendamentos do dia
+    for (const agendamento of this.agendamentosData) {
+      const [agHours, agMinutes] = agendamento.hora.split(':').map(Number);
+      const agStartTime = agHours * 60 + agMinutes;
+
+      // Obter duração do procedimento agendado
+      const procedimentoAgendado = this.procedimentos.find(p => p.id === agendamento.procedimento_id);
+      const agDuracao = procedimentoAgendado ?
+        this.procedimentoDuracoes[procedimentoAgendado.categoria] || 60 : 60;
+      const agEndTime = agStartTime + agDuracao;
+
+      // Verificar sobreposição de horários
+      if (this.timeRangesOverlap(startTime, endTime, agStartTime, agEndTime)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Verificar se dois intervalos de tempo se sobrepõem
+  private timeRangesOverlap(start1: number, end1: number, start2: number, end2: number): boolean {
+    return start1 < end2 && start2 < end1;
+  }
+
+  // Obter duração de um procedimento
+  getProcedimentoDuracao(procedimentoId: string): number {
+    if (procedimentoId === '0') return 0;
+
+    const procedimento = this.procedimentosFiltrados.find(p => p.id.toString() === procedimentoId);
+    if (!procedimento) return 0;
+
+    return this.procedimentoDuracoes[procedimento.categoria] || 60;
   }
 }

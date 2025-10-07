@@ -68,15 +68,18 @@ export class AuthService {
     }
   }
 
-  async setUserData(user: User, token: string) {
-    try {
-      await this.storage.set('user', user);
-      await this.storage.set('token', token);
-      this._user.next(user);
-      this._isAuthenticated.next(true);
-    } catch (error) {
-      console.error('Erro ao salvar dados de login:', error);
-    }
+  setUserData(user: User, token: string) {
+    // Definir os dados imediatamente para evitar problemas de timing
+    this._user.next(user);
+    this._isAuthenticated.next(true);
+
+    // Salvar no storage de forma assíncrona (sem bloquear)
+    this.storage.set('user', user).catch(error => {
+      console.error('Erro ao salvar usuário no storage:', error);
+    });
+    this.storage.set('token', token).catch(error => {
+      console.error('Erro ao salvar token no storage:', error);
+    });
   }
 
   async logout() {
@@ -94,6 +97,7 @@ export class AuthService {
     return this.api.login(credentials).pipe(
       switchMap((response: any) => {
         if (response.success && response.user && response.token) {
+          // Definir dados imediatamente
           this.setUserData(response.user, response.token);
           return from(Promise.resolve(response));
         } else {
