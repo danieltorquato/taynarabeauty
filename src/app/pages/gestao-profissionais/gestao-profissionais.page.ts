@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
-import { personAddOutline, createOutline, trashOutline, checkmarkOutline, closeOutline, cameraOutline } from 'ionicons/icons';
+import { personAddOutline, createOutline, trashOutline, checkmarkOutline, closeOutline, cameraOutline, informationCircleOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-gestao-profissionais',
@@ -18,7 +18,6 @@ export class GestaoProfissionaisPage implements OnInit {
   profissionais: any[] = [];
   usuarios: any[] = [];
   procedimentos: any[] = [];
-  opcoesCombo: any = {};
 
   // Formulário de novo profissional
   novoProfissional = {
@@ -26,7 +25,6 @@ export class GestaoProfissionaisPage implements OnInit {
     usuario_id: null,
     ativo: true,
     competencias: [] as number[],
-    opcoesCombo: [] as string[], // Para armazenar opções específicas do combo
     foto: '',
     almoco_inicio: '12:00',
     almoco_fim: '13:00'
@@ -40,7 +38,7 @@ export class GestaoProfissionaisPage implements OnInit {
   isEditMode = false;
 
   constructor(private api: ApiService, private router: Router) {
-    addIcons({personAddOutline,createOutline,trashOutline,closeOutline,cameraOutline,checkmarkOutline});
+    addIcons({personAddOutline,createOutline,trashOutline,closeOutline,cameraOutline,informationCircleOutline,checkmarkOutline});
   }
 
   async ngOnInit() {
@@ -77,7 +75,6 @@ export class GestaoProfissionaisPage implements OnInit {
       next: (res) => {
         if (res.success) {
           this.procedimentos = res.procedimentos;
-          this.opcoesCombo = res.opcoes || {};
         }
       },
       error: (err) => {
@@ -93,7 +90,6 @@ export class GestaoProfissionaisPage implements OnInit {
       usuario_id: null,
       ativo: true,
       competencias: [],
-      opcoesCombo: [],
       foto: '',
       almoco_inicio: '12:00',
       almoco_fim: '13:00'
@@ -109,7 +105,6 @@ export class GestaoProfissionaisPage implements OnInit {
       usuario_id: profissional.usuario_id,
       ativo: profissional.ativo,
       competencias: profissional.competencias || [],
-      opcoesCombo: profissional.opcoesCombo || [],
       foto: profissional.foto || '',
       almoco_inicio: profissional.almoco_inicio || '12:00',
       almoco_fim: profissional.almoco_fim || '13:00'
@@ -253,36 +248,6 @@ export class GestaoProfissionaisPage implements OnInit {
     return this.procedimentos.filter(p => p.categoria === categoria);
   }
 
-  temCompetenciaCombo(): boolean {
-    return this.novoProfissional.competencias.some(id => {
-      const proc = this.procedimentos.find(p => p.id === id);
-      return proc && proc.categoria === 'combo';
-    });
-  }
-
-  getOpcoesCombo(tipo: string): any[] {
-    const comboId = this.procedimentos.find(p => p.categoria === 'combo')?.id;
-    if (!comboId || !this.opcoesCombo[comboId]) {
-      return [];
-    }
-    return this.opcoesCombo[comboId].filter((opcao: any) => opcao.tipo === tipo);
-  }
-
-  temOpcaoCombo(value: string): boolean {
-    return this.novoProfissional.opcoesCombo.includes(value);
-  }
-
-  toggleOpcaoCombo(value: string, tipo: string) {
-    const index = this.novoProfissional.opcoesCombo.indexOf(value);
-    if (index > -1) {
-      this.novoProfissional.opcoesCombo.splice(index, 1);
-    } else {
-      this.novoProfissional.opcoesCombo.push(value);
-    }
-  }
-
-  formatarPreco(centavos: number): string {
-    if (!centavos) return '';
-    return `R$ ${(centavos / 100).toFixed(2).replace('.', ',')}`;
-  }
+  // Combo agora é automático baseado nas competências individuais
+  // Não precisa mais de funções específicas para combo
 }

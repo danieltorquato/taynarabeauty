@@ -14,7 +14,7 @@ import { calendarOutline, personOutline, informationCircleOutline, timeOutline, 
   templateUrl: './agendamentos.page.html',
   styleUrls: ['./agendamentos.page.scss'],
   standalone: true,
-  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, CommonModule, FormsModule]
+  imports: [IonButtons, IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonLabel, IonList, IonDatetime, IonChip, IonBackButton, IonIcon, IonSegment, IonSegmentButton, CommonModule, FormsModule]
 })
 export class AgendamentoPage implements OnInit {
   procedimentos: any[] = [];
@@ -34,6 +34,9 @@ export class AgendamentoPage implements OnInit {
   corCiliosId: number | null = null;
   corLabiosId: number | null = null;
   horariosDisponiveis: string[] = [];
+  horariosDisponiveisFiltrados: string[] = [];
+  selectedPeriod: string = 'all';
+  sugestoes: any[] = [];
 
   // Dados dinâmicos calculados
   currentPrice = 0;
@@ -500,15 +503,23 @@ export class AgendamentoPage implements OnInit {
 
         if (res.success) {
           if (res.horarios && Array.isArray(res.horarios) && res.horarios.length > 0) {
-            this.horariosDisponiveis = res.horarios.map((h: any) => h.hora.substring(0, 5));
+            // Mapear horários e remover duplicatas
+            const horariosCompletos: string[] = res.horarios.map((h: any) => h.hora.substring(0, 5));
+            this.horariosDisponiveis = [...new Set(horariosCompletos)].sort();
+            this.filterHorariosByPeriod();
+            this.sugestoes = []; // Limpar sugestões se há horários
           } else {
             console.warn('⚠️ API retornou success: true, mas sem horários');
             this.horariosDisponiveis = [];
+            this.horariosDisponiveisFiltrados = [];
+            this.sugestoes = res.sugestoes || []; // Receber sugestões da API
           }
         } else {
           console.warn('❌ API retornou success: false');
           console.warn('Mensagem:', res.message);
           this.horariosDisponiveis = [];
+          this.horariosDisponiveisFiltrados = [];
+          this.sugestoes = [];
         }
       },
       error: (err) => {
@@ -520,8 +531,44 @@ export class AgendamentoPage implements OnInit {
         console.error('==================');
         this.showErrorAlert(`Erro ao buscar horários: ${err.message}`);
         this.horariosDisponiveis = [];
+        this.horariosDisponiveisFiltrados = [];
       }
     });
+  }
+
+  onPeriodChange() {
+    this.filterHorariosByPeriod();
+  }
+
+  filterHorariosByPeriod() {
+    if (this.selectedPeriod === 'all') {
+      this.horariosDisponiveisFiltrados = [...this.horariosDisponiveis];
+    } else {
+      this.horariosDisponiveisFiltrados = this.horariosDisponiveis.filter(time => {
+        const hour = parseInt(time.split(':')[0]);
+
+        switch (this.selectedPeriod) {
+          case 'morning':
+            return hour >= 6 && hour < 12; // 06:00 - 11:59
+          case 'afternoon':
+            return hour >= 12 && hour < 18; // 12:00 - 17:59
+          case 'evening':
+            return hour >= 18 && hour < 24; // 18:00 - 23:59
+          default:
+            return true;
+        }
+      });
+    }
+  }
+
+  onSugestaoProximaData(sugestao: any) {
+    this.selectedDate = sugestao.data;
+    this.onDateChange();
+  }
+
+  onSugestaoOutroProfissional(sugestao: any) {
+    this.selectedProfissional = sugestao.profissional_id;
+    this.onDateChange();
   }
 
   async setProcedimento(procedimentoId: number) {
@@ -831,16 +878,6 @@ export class AgendamentoPage implements OnInit {
     return false;
   }
 
-  // Filtrar horários que não conflitam
-  get horariosDisponiveisFiltrados(): string[] {
-
-    const filtered = this.horariosDisponiveis.filter(slot => {
-      const conflict = this.conflictWithDuration(slot);
-      return !conflict;
-    });
-
-    return filtered;
-  }
 
   onSubmit() {
     if (!this.selectedProcedimento || !this.selectedDate || !this.selectedTime) {

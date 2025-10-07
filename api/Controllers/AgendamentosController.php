@@ -34,11 +34,24 @@ class AgendamentosController {
             return;
         }
 
-        // Verificação de conflitos temporariamente desabilitada para debug
+        // Verificar conflitos de horários antes de criar o agendamento
+        // (A verificação será feita após escolher o profissional, se necessário)
 
-        // Se profissional_id = 0, significa "sem preferência" - usar o primeiro disponível
+        // Se profissional_id = 0, significa "sem preferência" - usar sistema de fila inteligente
         if ($profissional_id === 0) {
-            $profissional_id = 1; // Default para primeiro profissional
+            $profissional_id = $this->escolherProfissionalPorFila($conn, $data, $hora, $procedimento_id);
+            if (!$profissional_id) {
+                http_response_code(422);
+                echo json_encode(['success' => false, 'message' => 'Nenhum profissional disponível para este horário.']);
+                return;
+            }
+        }
+
+        // Verificar conflitos de horários com o profissional escolhido
+        if (!$this->verificarDisponibilidadeHorario($conn, $data, $hora, $profissional_id, $procedimento_id)) {
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => 'Horário não disponível. Já existe um agendamento conflitante.']);
+            return;
         }
 
         try {
@@ -131,7 +144,10 @@ class AgendamentosController {
                 }
             }
 
-                   $stmt = $conn->prepare('INSERT INTO agendamentos (usuario_id, procedimento_id, profissional_id, opcao_cilios, cor_cilios, opcao_labios, data, hora, observacoes, status) VALUES (:usuario_id, :procedimento_id, :profissional_id, :opcao_cilios, :cor_cilios, :opcao_labios, :data, :hora, :observacoes, :status)');
+                   // Obter duração do procedimento
+                   $duracao = $this->getDuracaoProcedimento($procedimento_id);
+
+                   $stmt = $conn->prepare('INSERT INTO agendamentos (usuario_id, procedimento_id, profissional_id, opcao_cilios, cor_cilios, opcao_labios, data, hora, duracao, observacoes, status) VALUES (:usuario_id, :procedimento_id, :profissional_id, :opcao_cilios, :cor_cilios, :opcao_labios, :data, :hora, :duracao, :observacoes, :status)');
                    $status = 'pendente';
                    $stmt->bindParam(':usuario_id', $usuario_id);
                    $stmt->bindParam(':procedimento_id', $procedimento_id);
@@ -141,6 +157,7 @@ class AgendamentosController {
                    $stmt->bindParam(':opcao_labios', $opcao_labios);
                    $stmt->bindParam(':data', $data);
                    $stmt->bindParam(':hora', $hora);
+                   $stmt->bindParam(':duracao', $duracao);
                    $stmt->bindParam(':observacoes', $observacoes);
                    $stmt->bindParam(':status', $status);
             $stmt->execute();
@@ -193,13 +210,11 @@ class AgendamentosController {
     private function getDuracaoProcedimento($procedimento_id) {
         // Mapeamento de duração por procedimento (em minutos)
         $duracoes = [
-            1 => 120, // Extensão de Cílios - Fio a Fio
-            2 => 150, // Extensão de Cílios - Volume Brasileiro
-            3 => 150, // Extensão de Cílios - Volume Brasileiro Marrom
-            4 => 180, // Extensão de Cílios - Volume Inglês
-            5 => 180, // Extensão de Cílios - Fox Eyes
-            6 => 120, // Lash Lifting
-            7 => 60,  // Hidragloss - Lips
+            1 => 30,  // Design de sobrancelhas
+            2 => 45,  // Micropigmentação
+            3 => 30,  // Cílios
+            4 => 60,  // Lábios
+            5 => 120, // Combo (cílios + lábios)
         ];
 
         return $duracoes[$procedimento_id] ?? 60; // Default 60 minutos
@@ -207,8 +222,15 @@ class AgendamentosController {
 
     private function bloquearHorariosPorDuracao($conn, $data, $hora, $profissional_id, $procedimento_id) {
         try {
-            // Buscar duração do procedimento (das opções selecionadas)
-            $duracao = 60; // Default 60 minutos se não encontrar
+            // Obter duração do procedimento
+            $duracao = $this->getDuracaoProcedimento($procedimento_id);
+
+            // Lógica especial para combo (ID 5)
+            if ($procedimento_id == 5) { // Combo
+                // Combo deve bloquear horários para cílios (ID 3) e lábios (ID 4) individualmente
+                $this->bloquearHorariosCombo($conn, $data, $hora, $profissional_id, $duracao);
+                return;
+            }
 
             // Tentar buscar duração das opções do procedimento
             $stmt = $conn->prepare("SHOW TABLES LIKE 'procedimento_opcoes'");
@@ -485,6 +507,223 @@ class AgendamentosController {
             error_log('Erro ao liberar horários por duração: ' . $e->getMessage());
             // Não interromper o fluxo se falhar a liberação
         }
+    }
+
+    private function bloquearHorariosCombo($conn, $data, $hora, $profissional_id, $duracaoCombo) {
+        try {
+            // Combo bloqueia horários para cílios (ID 3) e lábios (ID 4) individualmente
+            $procedimentosCombo = [3, 4]; // Cílios e Lábios
+
+            foreach ($procedimentosCombo as $procedimentoId) {
+                $duracao = $this->getDuracaoProcedimento($procedimentoId);
+
+                // Converter hora para DateTime
+                $dataHora = new DateTime("{$data} {$hora}");
+                $horaInicio = $dataHora->format('H:i:s');
+
+                // Calcular horários que precisam ser bloqueados (intervalos de 15 min)
+                $horariosParaBloquear = [];
+                $tempoAtual = clone $dataHora;
+                $tempoFim = (clone $dataHora)->modify("+{$duracao} minutes");
+
+                while ($tempoAtual < $tempoFim) {
+                    $horariosParaBloquear[] = $tempoAtual->format('H:i:s');
+                    $tempoAtual->modify('+15 minutes');
+                }
+
+                // Verificar se tabela horarios_disponiveis existe
+                $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
+                $stmt->execute();
+                if ($stmt->rowCount() > 0) {
+                    // Bloquear horários para este procedimento específico
+                    foreach ($horariosParaBloquear as $horaBloqueio) {
+                        $stmt = $conn->prepare('
+                            INSERT INTO horarios_disponiveis (data, hora, profissional_id, status, procedimento_id)
+                            VALUES (:data, :hora, :profissional_id, "bloqueado", :procedimento_id)
+                            ON DUPLICATE KEY UPDATE status = "bloqueado"
+                        ');
+                        $stmt->bindParam(':data', $data);
+                        $stmt->bindParam(':hora', $horaBloqueio);
+                        $stmt->bindParam(':profissional_id', $profissional_id);
+                        $stmt->bindParam(':procedimento_id', $procedimentoId);
+                        $stmt->execute();
+                    }
+                }
+            }
+
+            error_log("Combo bloqueou horários para cílios e lábios: {$data} {$hora} (duração: {$duracaoCombo}min)");
+
+        } catch (Throwable $e) {
+            error_log('Erro ao bloquear horários do combo: ' . $e->getMessage());
+        }
+    }
+
+    private function verificarDisponibilidadeHorario($conn, $data, $hora, $profissional_id, $procedimento_id) {
+        try {
+            // Obter duração do procedimento
+            $duracao = $this->getDuracaoProcedimento($procedimento_id);
+
+            // Converter hora para minutos
+            $horaInicioMinutos = $this->converterHorarioParaMinutos($hora);
+            $horaFimMinutos = $horaInicioMinutos + $duracao;
+
+            // Buscar agendamentos existentes que podem conflitar
+            $stmt = $conn->prepare('
+                SELECT a.hora, a.duracao, p.nome as procedimento_nome
+                FROM agendamentos a
+                LEFT JOIN procedimentos p ON a.procedimento_id = p.id
+                WHERE a.data = :data
+                AND a.profissional_id = :profissional_id
+                AND a.status IN ("pendente", "confirmado")
+                AND (
+                    (TIME_TO_SEC(a.hora) / 60) < :hora_fim_minutos
+                    AND
+                    (TIME_TO_SEC(a.hora) / 60) + COALESCE(a.duracao, 60) > :hora_inicio_minutos
+                )
+            ');
+            $stmt->bindParam(':data', $data);
+            $stmt->bindParam(':profissional_id', $profissional_id);
+            $stmt->bindValue(':hora_fim_minutos', $horaFimMinutos);
+            $stmt->bindValue(':hora_inicio_minutos', $horaInicioMinutos);
+            $stmt->execute();
+            $agendamentosConflitantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Se encontrou agendamentos conflitantes, o horário não está disponível
+            if (count($agendamentosConflitantes) > 0) {
+                error_log("Conflito detectado para {$data} {$hora} - Profissional: {$profissional_id} - Procedimento: {$procedimento_id}");
+                foreach ($agendamentosConflitantes as $conflito) {
+                    error_log("  - Conflita com: {$conflito['procedimento_nome']} às {$conflito['hora']} (duração: {$conflito['duracao']}min)");
+                }
+                return false;
+            }
+
+            return true;
+
+        } catch (Throwable $e) {
+            error_log('Erro ao verificar disponibilidade de horário: ' . $e->getMessage());
+            return false; // Em caso de erro, não permitir agendamento
+        }
+    }
+
+    private function converterHorarioParaMinutos($hora) {
+        $partes = explode(':', $hora);
+        return ($partes[0] * 60) + $partes[1];
+    }
+
+    private function escolherProfissionalPorFila($conn, $data, $hora, $procedimento_id) {
+        try {
+            // Buscar profissionais que têm competência para o procedimento
+            $stmt = $conn->prepare('
+                SELECT DISTINCT p.id, p.nome
+                FROM profissionais p
+                INNER JOIN profissional_especializacoes pe ON p.id = pe.profissional_id
+                WHERE pe.procedimento_id = :procedimento_id
+                AND p.ativo = 1
+                ORDER BY p.nome
+            ');
+            $stmt->bindParam(':procedimento_id', $procedimento_id);
+            $stmt->execute();
+            $profissionaisCompetentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($profissionaisCompetentes)) {
+                return null; // Nenhum profissional competente
+            }
+
+            // Verificar disponibilidade de cada profissional
+            $profissionaisDisponiveis = [];
+            foreach ($profissionaisCompetentes as $profissional) {
+                if ($this->verificarDisponibilidadeHorario($conn, $data, $hora, $profissional['id'], $procedimento_id)) {
+                    $profissionaisDisponiveis[] = $profissional;
+                }
+            }
+
+            if (empty($profissionaisDisponiveis)) {
+                return null; // Nenhum profissional disponível
+            }
+
+            // Se só há um profissional disponível, escolher ele
+            if (count($profissionaisDisponiveis) === 1) {
+                return $profissionaisDisponiveis[0]['id'];
+            }
+
+            // Sistema de fila: priorizar quem teve o último agendamento há mais tempo
+            $profissionaisComUltimoAgendamento = [];
+            foreach ($profissionaisDisponiveis as $profissional) {
+                $ultimoAgendamento = $this->getUltimoAgendamento($conn, $profissional['id']);
+                $profissionaisComUltimoAgendamento[] = [
+                    'id' => $profissional['id'],
+                    'nome' => $profissional['nome'],
+                    'ultimo_agendamento' => $ultimoAgendamento
+                ];
+            }
+
+            // Ordenar por último agendamento (mais antigo primeiro)
+            usort($profissionaisComUltimoAgendamento, function($a, $b) {
+                if ($a['ultimo_agendamento'] === null && $b['ultimo_agendamento'] === null) {
+                    return 0; // Ambos nunca tiveram agendamento
+                }
+                if ($a['ultimo_agendamento'] === null) {
+                    return -1; // A nunca teve agendamento, priorizar
+                }
+                if ($b['ultimo_agendamento'] === null) {
+                    return 1; // B nunca teve agendamento, priorizar
+                }
+                return strtotime($a['ultimo_agendamento']) - strtotime($b['ultimo_agendamento']);
+            });
+
+            // Se há empate (mesmo tempo de último agendamento), escolher aleatoriamente
+            $primeiroProfissional = $profissionaisComUltimoAgendamento[0];
+            $profissionaisEmpatados = [$primeiroProfissional];
+
+            for ($i = 1; $i < count($profissionaisComUltimoAgendamento); $i++) {
+                $profissional = $profissionaisComUltimoAgendamento[$i];
+                if ($this->temMesmoUltimoAgendamento($primeiroProfissional['ultimo_agendamento'], $profissional['ultimo_agendamento'])) {
+                    $profissionaisEmpatados[] = $profissional;
+                } else {
+                    break; // Não há mais empates
+                }
+            }
+
+            // Escolher aleatoriamente entre os empatados
+            $escolhido = $profissionaisEmpatados[array_rand($profissionaisEmpatados)];
+
+            error_log("Sistema de fila escolheu profissional ID {$escolhido['id']} ({$escolhido['nome']}) para {$data} {$hora}");
+
+            return $escolhido['id'];
+
+        } catch (Throwable $e) {
+            error_log('Erro ao escolher profissional por fila: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function getUltimoAgendamento($conn, $profissional_id) {
+        try {
+            $stmt = $conn->prepare('
+                SELECT MAX(CONCAT(data, " ", hora)) as ultimo_agendamento
+                FROM agendamentos
+                WHERE profissional_id = :profissional_id
+                AND status IN ("pendente", "confirmado")
+            ');
+            $stmt->bindParam(':profissional_id', $profissional_id);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $result ? $result['ultimo_agendamento'] : null;
+        } catch (Throwable $e) {
+            error_log('Erro ao buscar último agendamento: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function temMesmoUltimoAgendamento($ultimo1, $ultimo2) {
+        if ($ultimo1 === null && $ultimo2 === null) {
+            return true;
+        }
+        if ($ultimo1 === null || $ultimo2 === null) {
+            return false;
+        }
+        return strtotime($ultimo1) === strtotime($ultimo2);
     }
 
     private function enviarNotificacaoNovoAgendamento($conn, $agendamentoId, $procedimentoId, $data, $hora) {

@@ -62,22 +62,46 @@ class ProfissionaisController {
         $stmt = $conn->prepare("SHOW TABLES LIKE 'profissional_especializacoes'");
         $stmt->execute();
         if ($stmt->rowCount() > 0) {
-            // Buscar profissionais especializados no procedimento
-            $stmt = $conn->prepare('
-                SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome
-                FROM profissionais p
-                LEFT JOIN usuarios u ON p.usuario_id = u.id
-                INNER JOIN profissional_especializacoes pe ON p.id = pe.profissional_id
-                WHERE pe.procedimento_id = :procedimento_id
-                AND p.ativo = 1
-                ORDER BY p.nome
-            ');
-            $stmt->bindParam(':procedimento_id', $procedimentoId);
-            $stmt->execute();
-            $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Lógica especial para combo (ID 5) - profissionais que têm AMBAS as competências
+            if ($procedimentoId == 5) { // Combo
+                $stmt = $conn->prepare('
+                    SELECT DISTINCT p.id, p.nome, p.usuario_id, u.nome as usuario_nome
+                    FROM profissionais p
+                    LEFT JOIN usuarios u ON p.usuario_id = u.id
+                    WHERE p.ativo = 1
+                    AND p.id IN (
+                        SELECT pe1.profissional_id
+                        FROM profissional_especializacoes pe1
+                        INNER JOIN profissional_especializacoes pe2 ON pe1.profissional_id = pe2.profissional_id
+                        WHERE pe1.procedimento_id = 3 AND pe2.procedimento_id = 4
+                    )
+                    ORDER BY p.nome
+                ');
+                $stmt->execute();
+                $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                // Para outros procedimentos, buscar normalmente
+                $stmt = $conn->prepare('
+                    SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome
+                    FROM profissionais p
+                    LEFT JOIN usuarios u ON p.usuario_id = u.id
+                    INNER JOIN profissional_especializacoes pe ON p.id = pe.profissional_id
+                    WHERE pe.procedimento_id = :procedimento_id
+                    AND p.ativo = 1
+                    ORDER BY p.nome
+                ');
+                $stmt->bindParam(':procedimento_id', $procedimentoId);
+                $stmt->execute();
+                $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         } else {
             // Fallback para lógica hardcoded se tabela não existir
             $profissionais = $this->getProfissionaisHardcoded($conn, $procedimentoId);
+        }
+
+        // Adicionar competências para cada profissional
+        foreach ($profissionais as &$profissional) {
+            $profissional['competencias'] = $this->getCompetenciasProfissional($conn, $profissional['id']);
         }
 
         return $profissionais;
@@ -86,10 +110,9 @@ class ProfissionaisController {
     private function getTodosProfissionais($conn) {
         // Buscar todos os profissionais ativos
         $stmt = $conn->prepare('
-            SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome, p.almoco_inicio, p.almoco_fim
+            SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome, p.almoco_inicio, p.almoco_fim, p.ativo
             FROM profissionais p
             LEFT JOIN usuarios u ON p.usuario_id = u.id
-            WHERE p.ativo = 1
             ORDER BY p.nome
         ');
         $stmt->execute();
@@ -100,7 +123,37 @@ class ProfissionaisController {
             return $this->getProfissionaisDemo(null);
         }
 
+        // Adicionar competências para cada profissional
+        foreach ($profissionais as &$profissional) {
+            $profissional['competencias'] = $this->getCompetenciasProfissional($conn, $profissional['id']);
+        }
+
         return $profissionais;
+    }
+
+    private function getCompetenciasProfissional($conn, $profissionalId) {
+        $competencias = [];
+
+        // Verificar se tabela de especializações existe
+        $stmt = $conn->prepare("SHOW TABLES LIKE 'profissional_especializacoes'");
+        $stmt->execute();
+        if ($stmt->rowCount() > 0) {
+            // Buscar competências do profissional
+            $stmt = $conn->prepare('
+                SELECT pe.procedimento_id
+                FROM profissional_especializacoes pe
+                WHERE pe.profissional_id = :profissional_id
+            ');
+            $stmt->bindParam(':profissional_id', $profissionalId);
+            $stmt->execute();
+            $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($resultados as $resultado) {
+                $competencias[] = (int)$resultado['procedimento_id'];
+            }
+        }
+
+        return $competencias;
     }
 
     private function getProfissionaisHardcoded($conn, $procedimentoId) {
@@ -112,8 +165,20 @@ class ProfissionaisController {
             return $profissionais;
         }
 
-        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)
-        if (in_array($procedimentoId, [1, 2, 3, 5, 6])) {
+        // Lógica especial para combo (ID 5) - profissionais que podem fazer cílios E lábios
+        if ($procedimentoId == 5) { // Combo
+            // Buscar profissionais que têm AMBAS as competências (cílios E lábios)
+            // Taynara pode fazer cílios, mas não lábios - NÃO aparece no combo
+            // Mayara pode fazer lábios, mas não cílios - NÃO aparece no combo
+            // Sara pode fazer lábios, mas não cílios - NÃO aparece no combo
+
+            // Por enquanto, nenhum profissional hardcoded pode fazer combo
+            // Isso será resolvido quando os profissionais forem configurados com competências individuais
+            return $profissionais;
+        }
+
+        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 6)
+        if (in_array($procedimentoId, [1, 2, 3, 6])) {
             $stmt = $conn->prepare('SELECT p.id, p.nome, p.usuario_id, u.nome as usuario_nome FROM profissionais p LEFT JOIN usuarios u ON p.usuario_id = u.id WHERE p.id = 1 AND p.ativo = 1');
             $stmt->execute();
             $taynara = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -151,14 +216,23 @@ class ProfissionaisController {
         // Se não há procedimentoId, retornar todos os profissionais demo
         if (!$procedimentoId) {
             return [
-                ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara', 'competencias' => [1, 2, 3, 5, 6], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00'],
+                ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara', 'competencias' => [1, 2, 3, 6], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00'],
                 ['id' => 2, 'nome' => 'Mayara Casagrande', 'usuario_id' => 4, 'usuario_nome' => 'Mayara', 'competencias' => [4], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00'],
                 ['id' => 3, 'nome' => 'Sara Casagrande', 'usuario_id' => 5, 'usuario_nome' => 'Sara', 'competencias' => [4], 'almoco_inicio' => '12:00:00', 'almoco_fim' => '13:00:00']
             ];
         }
 
-        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 5, 6)
-        if (in_array($procedimentoId, [1, 2, 3, 5, 6])) {
+        // Lógica especial para combo (ID 5) - profissionais que podem fazer cílios E lábios
+        if ($procedimentoId == 5) { // Combo
+            // Nenhum profissional demo pode fazer combo (ninguém tem ambas as competências)
+            // Taynara: cílios apenas
+            // Mayara: lábios apenas
+            // Sara: lábios apenas
+            return $profissionais;
+        }
+
+        // Taynara (ID 1) - Especialista em cílios (procedimento_id 1, 2, 3, 6)
+        if (in_array($procedimentoId, [1, 2, 3, 6])) {
             $profissionais[] = ['id' => 1, 'nome' => 'Taynara Casagrande', 'usuario_id' => 3, 'usuario_nome' => 'Taynara'];
         }
 

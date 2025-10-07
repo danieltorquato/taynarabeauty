@@ -391,11 +391,47 @@ ion-label {
   --ion-color-primary-contrast: #ffffff; /* texto branco nos estados selecionados */
 }
 
+/* Filtro de Períodos e Horários */
+.period-filter {
+  margin: 16px 0;
+  padding: 0 12px;
+}
+
+.period-filter ion-segment {
+  --background: #f9e1ef;
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.period-filter ion-segment-button {
+  --color: #7a2d68;
+  --color-checked: #fff;
+  --background-checked: #f28cb4;
+  --border-radius: 8px;
+  font-weight: 500;
+  min-height: 40px;
+}
+
+.time-slots-container {
+  margin: 16px 0;
+}
+
 .time-slots {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
-  margin: 16px 0;
+  padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.time-slots::-webkit-scrollbar {
+  display: none;
+}
+
+.time-slots ion-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 ion-chip {
@@ -545,6 +581,84 @@ ion-chip.active {
 .no-schedule-message small {
   font-size: 0.9rem;
   color: #333;
+}
+
+/* Sugestões inteligentes */
+.suggestions-container {
+  margin: 20px 0;
+  padding: 0 12px;
+}
+
+.suggestions-container h4 {
+  margin: 0 0 16px 0;
+  color: #2b1130;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.suggestion-card {
+  margin-bottom: 12px;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.suggestion-item.proxima-data {
+  border-left: 4px solid #4CAF50;
+  background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
+}
+
+.suggestion-item.outro-profissional {
+  border-left: 4px solid #2196F3;
+  background: linear-gradient(135deg, #f3f8ff 0%, #ffffff 100%);
+}
+
+.suggestion-item ion-icon {
+  font-size: 1.5rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.suggestion-item.proxima-data ion-icon {
+  color: #4CAF50;
+}
+
+.suggestion-item.outro-profissional ion-icon {
+  color: #2196F3;
+}
+
+.suggestion-content {
+  flex: 1;
+}
+
+.suggestion-content h5 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2b1130;
+}
+
+.suggestion-content p {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.suggestion-content ion-button {
+  --color: #f28cb4;
+  --border-color: #f28cb4;
+  --border-radius: 8px;
+  font-size: 0.85rem;
+  height: 32px;
 }
 
 /* Seção de Profissionais */

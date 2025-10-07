@@ -45,6 +45,9 @@ if ($route === '/' && $_SERVER['REQUEST_METHOD'] === 'GET') {
             'POST /auth/register' => 'Registro de usuário',
             'GET /procedimentos' => 'Listar procedimentos',
             'GET /profissionais' => 'Listar profissionais',
+            'POST /profissionais' => 'Criar profissional',
+            'PUT /profissionais/{id}' => 'Atualizar profissional',
+            'DELETE /profissionais/{id}' => 'Excluir profissional',
             'GET /horarios' => 'Listar horários disponíveis',
             'POST /agendamentos' => 'Criar agendamento',
             'GET /agendamentos' => 'Listar agendamentos',
@@ -151,6 +154,24 @@ if ($route === '/combo/combinacao' && $_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     $controller = new ProfissionaisController();
     $controller->listar();
+    exit;
+}
+
+if ($route === '/profissionais' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $controller = new ProfissionaisController();
+    $controller->criar();
+    exit;
+}
+
+if (preg_match('/^\/profissionais\/(\d+)$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'PUT') {
+    $controller = new ProfissionaisController();
+    $controller->atualizar($matches[1]);
+    exit;
+}
+
+if (preg_match('/^\/profissionais\/(\d+)$/', $route, $matches) && $_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $controller = new ProfissionaisController();
+    $controller->excluir($matches[1]);
     exit;
 }
 

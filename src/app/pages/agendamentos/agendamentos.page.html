@@ -131,20 +131,74 @@
         ></ion-datetime>
       </div>
 
+      <!-- Filtro de Períodos -->
+      <div class="period-filter" *ngIf="horariosDisponiveis.length > 0">
+        <ion-segment [(ngModel)]="selectedPeriod" (ionChange)="onPeriodChange()">
+          <ion-segment-button value="morning">
+            <ion-label>Manhã</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="afternoon">
+            <ion-label>Tarde</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="evening">
+            <ion-label>Noite</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+
       <!-- Horários -->
-      <div class="time-slots">
-        <ion-chip
-          *ngFor="let t of horariosDisponiveisFiltrados"
-          (click)="selectedTime = t"
-          [class.active]="selectedTime === t">
-          {{ t }}
-        </ion-chip>
+      <div class="time-slots-container">
+        <div class="time-slots" *ngIf="horariosDisponiveisFiltrados.length > 0">
+          <ion-chip
+            *ngFor="let t of horariosDisponiveisFiltrados"
+            (click)="selectedTime = t"
+            [class.active]="selectedTime === t">
+            {{ t }}
+          </ion-chip>
+        </div>
 
         <!-- Mensagem quando não há horários -->
         <div *ngIf="horariosDisponiveisFiltrados.length === 0 && selectedDate" class="no-schedule-message">
           <ion-icon name="calendar-outline"></ion-icon>
-          <p>Sem horários disponíveis para esta data</p>
-          <small>Escolha outra data ou entre em contato conosco</small>
+          <p>Sem horários disponíveis para este período</p>
+          <small>Escolha outro período ou entre em contato conosco</small>
+        </div>
+
+        <!-- Sugestões inteligentes -->
+        <div *ngIf="sugestoes.length > 0" class="suggestions-container">
+          <h4>💡 Sugestões</h4>
+
+          <!-- Sugestão de próxima data -->
+          <div *ngFor="let sugestao of sugestoes" class="suggestion-card">
+            <div *ngIf="sugestao.tipo === 'proxima_data'" class="suggestion-item proxima-data">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <div class="suggestion-content">
+                <h5>Próxima data disponível</h5>
+                <p>{{ sugestao.mensagem }}</p>
+                <ion-button
+                  fill="outline"
+                  size="small"
+                  (click)="onSugestaoProximaData(sugestao)">
+                  Ver horários
+                </ion-button>
+              </div>
+            </div>
+
+            <!-- Sugestão de outro profissional -->
+            <div *ngIf="sugestao.tipo === 'outro_profissional'" class="suggestion-item outro-profissional">
+              <ion-icon name="person-outline"></ion-icon>
+              <div class="suggestion-content">
+                <h5>Outro profissional disponível</h5>
+                <p>{{ sugestao.mensagem }}</p>
+                <ion-button
+                  fill="outline"
+                  size="small"
+                  (click)="onSugestaoOutroProfissional(sugestao)">
+                  Escolher profissional
+                </ion-button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

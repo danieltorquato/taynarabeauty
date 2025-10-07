@@ -62,9 +62,3 @@ RewriteRule ^api/(.*)$ /api/index.php [QSA,L]
 AddType application/javascript .js
 AddType text/css .css
 
-Database.php
-Database.prod.php
-Database.production.php
-Database.test.php
-Database.test.php
-

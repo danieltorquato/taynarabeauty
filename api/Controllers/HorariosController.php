@@ -19,6 +19,12 @@ class HorariosController {
 
         try {
             $horarios = [];
+            $sugestoes = [];
+
+            // Verificar se é hoje e obter hora atual
+            $hoje = date('Y-m-d');
+            $horaAtual = date('H:i:s');
+            $ehHoje = ($data === $hoje);
 
             // Check if horarios_disponiveis table exists
             $stmt = $conn->prepare("SHOW TABLES LIKE 'horarios_disponiveis'");
@@ -34,26 +40,41 @@ class HorariosController {
                     $params[':profissional_id'] = $profissionalId;
                 }
 
-                // Se procedimento foi especificado, filtrar por ele
-                if ($procedimentoId && $procedimentoId > 0) {
-                    $whereConditions[] = 'procedimento_id = :procedimento_id';
-                    $params[':procedimento_id'] = $procedimentoId;
+                // Lógica especial para combo (ID 5)
+                if ($procedimentoId == 5) { // Combo
+                    $horarios = $this->getHorariosCombo($conn, $data, $profissionalId);
+                } else {
+                    // Se procedimento foi especificado, usar validação de duração mínima
+                    if ($procedimentoId && $procedimentoId > 0) {
+                        $horarios = $this->getHorariosPorProcedimento($conn, $data, $profissionalId, $procedimentoId);
+                    } else {
+                        // Para procedimentos não especificados, usar lógica antiga
+                        $sql = 'SELECT hora, status FROM horarios_disponiveis WHERE ' . implode(' AND ', $whereConditions) . ' ORDER BY hora';
+                        $stmt = $conn->prepare($sql);
+
+                        // Bind dos parâmetros
+                        foreach ($params as $key => $value) {
+                            $stmt->bindValue($key, $value);
+                        }
+
+                        $stmt->execute();
+                        $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    }
                 }
-
-                $sql = 'SELECT hora, status FROM horarios_disponiveis WHERE ' . implode(' AND ', $whereConditions) . ' ORDER BY hora';
-                $stmt = $conn->prepare($sql);
-
-                // Bind dos parâmetros
-                foreach ($params as $key => $value) {
-                    $stmt->bindValue($key, $value);
-                }
-
-                $stmt->execute();
-                $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 // Filtrar horários de almoço se profissional foi especificado
                 if ($profissionalId && $profissionalId > 0) {
                     $horarios = $this->filtrarHorariosAlmoco($conn, $horarios, $profissionalId);
+                }
+
+                // Filtrar horários passados se for hoje
+                if ($ehHoje) {
+                    $horarios = $this->filtrarHorariosPassados($horarios, $horaAtual);
+                }
+
+                // Gerar sugestões se não há horários disponíveis
+                if (empty($horarios)) {
+                    $sugestoes = $this->gerarSugestoes($conn, $data, $profissionalId, $procedimentoId);
                 }
 
                 // Se não há horários específicos para esta data, retornar array vazio
@@ -61,11 +82,13 @@ class HorariosController {
             } else {
                 // Se a tabela não existe, retornar array vazio
                 $horarios = [];
+                $sugestoes = $this->gerarSugestoes($conn, $data, $profissionalId, $procedimentoId);
             }
 
             echo json_encode([
                 'success' => true,
-                'horarios' => $horarios
+                'horarios' => $horarios,
+                'sugestoes' => $sugestoes
             ]);
         } catch (Throwable $e) {
             error_log('Erro HorariosController::listar: ' . $e->getMessage());
@@ -429,6 +452,119 @@ class HorariosController {
         }
     }
 
+    private function getHorariosCombo($conn, $data, $profissionalId) {
+        $horariosCombo = [];
+
+        // Obter duração mínima do combo
+        $duracaoMinimaCombo = $this->getDuracaoMinimaProcedimento($conn, 5); // Combo ID 5
+
+        // Buscar horários disponíveis para cílios (ID 3)
+        $horariosCilios = $this->getHorariosPorProcedimento($conn, $data, $profissionalId, 3);
+
+        // Buscar horários disponíveis para lábios (ID 4)
+        $horariosLabios = $this->getHorariosPorProcedimento($conn, $data, $profissionalId, 4);
+
+        // Encontrar horários que estão disponíveis para AMBOS os procedimentos
+        foreach ($horariosCilios as $horarioCilios) {
+            foreach ($horariosLabios as $horarioLabios) {
+                if ($horarioCilios['hora'] === $horarioLabios['hora']) {
+                    // Verificar se o horário tem duração mínima suficiente para combo
+                    if ($this->verificarDuracaoMinima($conn, $data, $horarioCilios['hora'], $profissionalId, $duracaoMinimaCombo)) {
+                        // Verificar se há conflitos com agendamentos existentes
+                        if ($this->verificarDisponibilidadeCombo($conn, $data, $horarioCilios['hora'], $profissionalId)) {
+                            $horariosCombo[] = [
+                                'hora' => $horarioCilios['hora'],
+                                'status' => 'livre'
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $horariosCombo;
+    }
+
+    private function getHorariosPorProcedimento($conn, $data, $profissionalId, $procedimentoId) {
+        $whereConditions = ['data = :data', 'status = "livre"', 'procedimento_id = :procedimento_id'];
+        $params = [':data' => $data, ':procedimento_id' => $procedimentoId];
+
+        if ($profissionalId && $profissionalId > 0) {
+            $whereConditions[] = 'profissional_id = :profissional_id';
+            $params[':profissional_id'] = $profissionalId;
+        }
+
+        $sql = 'SELECT hora, status FROM horarios_disponiveis WHERE ' . implode(' AND ', $whereConditions) . ' ORDER BY hora';
+        $stmt = $conn->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        $stmt->execute();
+        $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Filtrar horários que respeitam a duração mínima do procedimento
+        $horariosValidos = [];
+        $duracaoMinima = $this->getDuracaoMinimaProcedimento($conn, $procedimentoId);
+
+        foreach ($horarios as $horario) {
+            if ($this->verificarDuracaoMinima($conn, $data, $horario['hora'], $profissionalId, $duracaoMinima)) {
+                $horariosValidos[] = $horario;
+            }
+        }
+
+        return $horariosValidos;
+    }
+
+    private function verificarDisponibilidadeCombo($conn, $data, $hora, $profissionalId) {
+        // Verificar se há agendamentos existentes que conflitariam com o combo
+        // Combo precisa de tempo suficiente para ambos os procedimentos
+
+        try {
+            // Converter hora do combo para minutos
+            $horaComboMinutos = $this->converterHorarioParaMinutos($hora);
+
+            // Duração estimada do combo (em minutos) - pode ser ajustada conforme necessário
+            $duracaoCombo = 120; // 2 horas para combo (cílios + lábios)
+
+            $fimCombo = $horaComboMinutos + $duracaoCombo;
+
+            // Buscar apenas agendamentos que podem conflitar (otimização)
+            // Busca agendamentos que começam antes do fim do combo e terminam depois do início do combo
+            $stmt = $conn->prepare('
+                SELECT a.hora, a.duracao, p.nome as procedimento_nome
+                FROM agendamentos a
+                LEFT JOIN procedimentos p ON a.procedimento_id = p.id
+                WHERE a.data = :data
+                AND a.profissional_id = :profissional_id
+                AND a.status IN ("pendente", "confirmado")
+                AND (
+                    (TIME_TO_SEC(a.hora) / 60) < :fim_combo_minutos
+                    AND
+                    (TIME_TO_SEC(a.hora) / 60) + COALESCE(a.duracao, 60) > :inicio_combo_minutos
+                )
+            ');
+            $stmt->bindParam(':data', $data);
+            $stmt->bindParam(':profissional_id', $profissionalId);
+            $stmt->bindValue(':fim_combo_minutos', $fimCombo);
+            $stmt->bindValue(':inicio_combo_minutos', $horaComboMinutos);
+            $stmt->execute();
+            $agendamentosConflitantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Se encontrou agendamentos conflitantes, o horário não está disponível
+            if (count($agendamentosConflitantes) > 0) {
+                return false;
+            }
+
+            return true;
+
+        } catch (Throwable $e) {
+            error_log('Erro ao verificar disponibilidade combo: ' . $e->getMessage());
+            return false;
+        }
+    }
+
     private function getHorariosPadrao() {
         $horarios = [];
 
@@ -552,5 +688,204 @@ class HorariosController {
             error_log('Erro ao verificar horário de almoço: ' . $e->getMessage());
             return false;
         }
+    }
+
+    private function getDuracaoMinimaProcedimento($conn, $procedimentoId) {
+        try {
+            $stmt = $conn->prepare('SELECT duracao_min FROM procedimentos WHERE id = :id LIMIT 1');
+            $stmt->bindParam(':id', $procedimentoId);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $result ? (int)$result['duracao_min'] : 30; // Default 30 minutos
+        } catch (Throwable $e) {
+            error_log('Erro ao buscar duração mínima: ' . $e->getMessage());
+            return 30; // Default 30 minutos
+        }
+    }
+
+    private function verificarDuracaoMinima($conn, $data, $hora, $profissionalId, $duracaoMinima) {
+        try {
+            // Converter hora para minutos
+            $horaInicioMinutos = $this->converterHorarioParaMinutos($hora);
+            $horaFimMinutos = $horaInicioMinutos + $duracaoMinima;
+
+            // Verificar se há agendamentos que conflitariam com a duração mínima
+            $stmt = $conn->prepare('
+                SELECT a.hora, a.duracao, p.nome as procedimento_nome
+                FROM agendamentos a
+                LEFT JOIN procedimentos p ON a.procedimento_id = p.id
+                WHERE a.data = :data
+                AND a.profissional_id = :profissional_id
+                AND a.status IN ("pendente", "confirmado")
+                AND (
+                    (TIME_TO_SEC(a.hora) / 60) < :hora_fim_minutos
+                    AND
+                    (TIME_TO_SEC(a.hora) / 60) + COALESCE(a.duracao, 60) > :hora_inicio_minutos
+                )
+            ');
+            $stmt->bindParam(':data', $data);
+            $stmt->bindParam(':profissional_id', $profissionalId);
+            $stmt->bindValue(':hora_fim_minutos', $horaFimMinutos);
+            $stmt->bindValue(':hora_inicio_minutos', $horaInicioMinutos);
+            $stmt->execute();
+            $agendamentosConflitantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Se encontrou agendamentos conflitantes, o horário não tem duração mínima suficiente
+            return count($agendamentosConflitantes) === 0;
+
+        } catch (Throwable $e) {
+            error_log('Erro ao verificar duração mínima: ' . $e->getMessage());
+            return false; // Em caso de erro, não permitir
+        }
+    }
+
+    private function filtrarHorariosPassados($horarios, $horaAtual) {
+        $horariosValidos = [];
+
+        foreach ($horarios as $horario) {
+            $horaHorario = $horario['hora'];
+
+            // Se a hora do horário é posterior à hora atual, incluir
+            if ($horaHorario > $horaAtual) {
+                $horariosValidos[] = $horario;
+            }
+        }
+
+        return $horariosValidos;
+    }
+
+    private function gerarSugestoes($conn, $data, $profissionalId, $procedimentoId) {
+        $sugestoes = [];
+
+        try {
+            // Verificar se é problema de horário (todos os horários passados) ou agenda do profissional
+            $hoje = date('Y-m-d');
+            $horaAtual = date('H:i:s');
+            $ehHoje = ($data === $hoje);
+
+            if ($ehHoje) {
+                // Se é hoje, verificar se há horários futuros disponíveis
+                $stmt = $conn->prepare('
+                    SELECT COUNT(*) as total
+                    FROM horarios_disponiveis
+                    WHERE data = :data
+                    AND status = "livre"
+                    AND hora > :hora_atual
+                ');
+                $stmt->bindValue(':data', $data);
+                $stmt->bindValue(':hora_atual', $horaAtual);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['total'] > 0) {
+                    // Há horários futuros, problema é agenda do profissional
+                    $sugestoes = $this->sugerirOutrosProfissionais($conn, $data, $procedimentoId);
+                } else {
+                    // Não há horários futuros, sugerir próxima data
+                    $sugestoes = $this->sugerirProximaData($conn, $data, $profissionalId, $procedimentoId);
+                }
+            } else {
+                // Se não é hoje, verificar se há horários disponíveis
+                $stmt = $conn->prepare('
+                    SELECT COUNT(*) as total
+                    FROM horarios_disponiveis
+                    WHERE data = :data
+                    AND status = "livre"
+                ');
+                $stmt->bindValue(':data', $data);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['total'] > 0) {
+                    // Há horários, problema é agenda do profissional
+                    $sugestoes = $this->sugerirOutrosProfissionais($conn, $data, $procedimentoId);
+                } else {
+                    // Não há horários, sugerir próxima data
+                    $sugestoes = $this->sugerirProximaData($conn, $data, $profissionalId, $procedimentoId);
+                }
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro ao gerar sugestões: ' . $e->getMessage());
+        }
+
+        return $sugestoes;
+    }
+
+    private function sugerirProximaData($conn, $dataAtual, $profissionalId, $procedimentoId) {
+        $sugestoes = [];
+
+        try {
+            // Buscar próximas 7 datas com horários disponíveis
+            for ($i = 1; $i <= 7; $i++) {
+                $proximaData = date('Y-m-d', strtotime($dataAtual . " +{$i} days"));
+
+                $stmt = $conn->prepare('
+                    SELECT COUNT(*) as total
+                    FROM horarios_disponiveis
+                    WHERE data = :data
+                    AND status = "livre"
+                ');
+                $stmt->bindValue(':data', $proximaData);
+                $stmt->execute();
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['total'] > 0) {
+                    $sugestoes[] = [
+                        'tipo' => 'proxima_data',
+                        'data' => $proximaData,
+                        'data_formatada' => date('d/m/Y', strtotime($proximaData)),
+                        'mensagem' => "Próxima data disponível: " . date('d/m/Y', strtotime($proximaData))
+                    ];
+                    break; // Encontrou a primeira data disponível
+                }
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro ao sugerir próxima data: ' . $e->getMessage());
+        }
+
+        return $sugestoes;
+    }
+
+    private function sugerirOutrosProfissionais($conn, $data, $procedimentoId) {
+        $sugestoes = [];
+
+        try {
+            // Buscar outros profissionais que têm competência e horários disponíveis
+            $stmt = $conn->prepare('
+                SELECT DISTINCT p.id, p.nome, COUNT(h.id) as horarios_disponiveis
+                FROM profissionais p
+                INNER JOIN profissional_especializacoes pe ON p.id = pe.profissional_id
+                LEFT JOIN horarios_disponiveis h ON p.id = h.profissional_id
+                    AND h.data = :data
+                    AND h.status = "livre"
+                WHERE pe.procedimento_id = :procedimento_id
+                AND p.ativo = 1
+                GROUP BY p.id, p.nome
+                HAVING horarios_disponiveis > 0
+                ORDER BY horarios_disponiveis DESC
+            ');
+            $stmt->bindValue(':data', $data);
+            $stmt->bindValue(':procedimento_id', $procedimentoId);
+            $stmt->execute();
+            $profissionais = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($profissionais as $profissional) {
+                $sugestoes[] = [
+                    'tipo' => 'outro_profissional',
+                    'profissional_id' => $profissional['id'],
+                    'profissional_nome' => $profissional['nome'],
+                    'horarios_disponiveis' => $profissional['horarios_disponiveis'],
+                    'mensagem' => "Outro profissional disponível: {$profissional['nome']} ({$profissional['horarios_disponiveis']} horários)"
+                ];
+            }
+
+        } catch (Throwable $e) {
+            error_log('Erro ao sugerir outros profissionais: ' . $e->getMessage());
+        }
+
+        return $sugestoes;
     }
 }
