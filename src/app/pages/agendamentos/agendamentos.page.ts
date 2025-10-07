@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
-import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon, IonSegmentButton, IonCard, IonCardContent, IonSegment } from "@ionic/angular/standalone";
+import { IonButton, IonLabel, IonItem, IonSelect, IonSelectOption, IonList, IonDatetime, IonChip, IonBackButton, IonContent, IonTitle, IonToolbar, IonHeader, IonButtons, IonIcon, IonSegmentButton, IonCard, IonCardContent, IonSegment, AlertController } from "@ionic/angular/standalone";
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -56,9 +56,29 @@ export class AgendamentoPage implements OnInit {
   selectedSegment = 'todos';
 
 
-  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService) {
+  constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService, private alertController: AlertController) {
     // Registrar ícones
     addIcons({informationCircleOutline,eyeOutline,eyedropOutline,heartOutline,personOutline,calendarOutline,timeOutline});
+  }
+
+  // Mostrar alert simples de informação
+  async showInfoAlert(title: string, message: string) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
   }
 
   async ngOnInit() {
@@ -498,7 +518,7 @@ export class AgendamentoPage implements OnInit {
         console.error('Message:', err.message);
         console.error('Error:', err.error);
         console.error('==================');
-        alert(`Erro ao buscar horários: ${err.message}`);
+        this.showErrorAlert(`Erro ao buscar horários: ${err.message}`);
         this.horariosDisponiveis = [];
       }
     });
@@ -824,29 +844,29 @@ export class AgendamentoPage implements OnInit {
 
   onSubmit() {
     if (!this.selectedProcedimento || !this.selectedDate || !this.selectedTime) {
-      alert('Selecione procedimento, data e horário.');
+      this.showInfoAlert('Seleção Necessária', 'Selecione procedimento, data e horário.');
       return;
     }
 
     if (this.selectedProfissional === null || this.selectedProfissional === undefined) {
-      alert('Selecione um profissional ou escolha "Sem preferência" para agendamento automático.');
+      this.showInfoAlert('Profissional Necessário', 'Selecione um profissional ou escolha "Sem preferência" para agendamento automático.');
       return;
     }
 
     // Validar se todas as opções de combo estão selecionadas
     if (this.isComboSelected) {
       if (!this.tipoCilios || !this.corCilios || !this.corLabios) {
-        alert('Selecione todas as opções do combo: tipo de cílios, cor dos cílios e cor dos lábios.');
+        this.showInfoAlert('Opções do Combo', 'Selecione todas as opções do combo: tipo de cílios, cor dos cílios e cor dos lábios.');
         return;
       }
     } else if (this.isCiliosSelected) {
       if (!this.tipoCilios || !this.corCilios) {
-        alert('Selecione o tipo e cor dos cílios.');
+        this.showInfoAlert('Opções dos Cílios', 'Selecione o tipo e cor dos cílios.');
         return;
       }
     } else if (this.isLabiosSelected) {
       if (!this.corLabios) {
-        alert('Selecione a cor dos lábios.');
+        this.showInfoAlert('Cor dos Lábios', 'Selecione a cor dos lábios.');
         return;
       }
     }
@@ -875,7 +895,7 @@ export class AgendamentoPage implements OnInit {
     if (profissionalId === 0) {
       profissionalId = this.getNextProfissionalInQueue();
       if (profissionalId === 0) {
-        alert('Nenhum profissional disponível para este horário. Tente outro horário.');
+        this.showInfoAlert('Profissional Indisponível', 'Nenhum profissional disponível para este horário. Tente outro horário.');
         return;
       }
     } else {
@@ -909,11 +929,11 @@ export class AgendamentoPage implements OnInit {
           };
           this.router.navigateByUrl('/confirmacao', { state });
         } else {
-          alert(res?.message || 'Não foi possível criar o agendamento.');
+          this.showErrorAlert(res?.message || 'Não foi possível criar o agendamento.');
         }
       },
       error: (err) => {
-        alert(err?.error?.message || 'Erro ao comunicar com o servidor.');
+        this.showErrorAlert(err?.error?.message || 'Erro ao comunicar com o servidor.');
       }
     });
   }

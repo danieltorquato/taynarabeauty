@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonInput, IonButton } from '@ionic/angular/standalone';
+import { IonContent, IonInput, IonButton, AlertController } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -24,7 +24,8 @@ export class LoginPage implements OnInit, OnDestroy {
   constructor(
     private api: ApiService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private alertController: AlertController
   ) {}
 
   ngOnInit() {
@@ -42,12 +43,32 @@ export class LoginPage implements OnInit, OnDestroy {
     }
   }
 
+  // Mostrar alert simples de informação
+  async showInfoAlert(title: string, message: string) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
   onSubmit() {
     if (this.loading) return;
 
     // Validação básica dos campos
     if (!this.email || !this.password) {
-      alert('Por favor, preencha todos os campos');
+      this.showInfoAlert('Campos Obrigatórios', 'Por favor, preencha todos os campos');
       return;
     }
 
@@ -87,13 +108,13 @@ export class LoginPage implements OnInit, OnDestroy {
             }
           } else {
             console.error('Falha no login:', res?.message);
-            alert(res?.message || 'Falha no login');
+            this.showErrorAlert(res?.message || 'Falha no login');
           }
         },
         error: (err) => {
           console.error('Erro no login:', err);
           this.loading = false;
-          alert(err?.error?.message || 'Erro ao conectar ao servidor');
+          this.showErrorAlert(err?.error?.message || 'Erro ao conectar ao servidor');
         }
       });
     } else {
@@ -107,13 +128,13 @@ export class LoginPage implements OnInit, OnDestroy {
             this.redirectBasedOnRole();
           } else {
             console.error('Falha no login:', res?.message);
-            alert(res?.message || 'Falha no login');
+            this.showErrorAlert(res?.message || 'Falha no login');
           }
         },
         error: (err) => {
           console.error('Erro no login:', err);
           this.loading = false;
-          alert(err?.error?.message || 'Erro ao conectar ao servidor');
+          this.showErrorAlert(err?.error?.message || 'Erro ao conectar ao servidor');
         }
       });
     }

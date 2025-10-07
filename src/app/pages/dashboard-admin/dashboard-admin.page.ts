@@ -140,6 +140,63 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     }, 1000);
   }
 
+  // Mostrar alert simples de informação
+  async showInfoAlert(title: string, message: string) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de sucesso
+  async showSuccessAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '✅ Sucesso',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de confirmação simples
+  async showConfirmAlert(
+    title: string,
+    message: string,
+    confirmText: string = 'Sim',
+    cancelText: string = 'Cancelar'
+  ): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertController.create({
+        header: title,
+        message: message,
+        buttons: [
+          {
+            text: cancelText,
+            role: 'cancel',
+            handler: () => resolve(false)
+          },
+          {
+            text: confirmText,
+            handler: () => resolve(true)
+          }
+        ]
+      });
+      await alert.present();
+    });
+  }
+
   generateTimeSlots() {
     this.timeSlots = [];
     // Gerar horários de 8:00 às 18:00 de 15 em 15 minutos
@@ -254,9 +311,14 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     });
   }
 
-  onDateChange() {
+  async onDateChange() {
     if (this.hasUnsavedChanges) {
-      const confirmChange = confirm('Você tem alterações não salvas. Deseja continuar e perder as alterações?');
+      const confirmChange = await this.showConfirmAlert(
+        'Alterações Pendentes',
+        'Você tem alterações não salvas. Deseja continuar e perder as alterações?',
+        'Sim, continuar',
+        'Cancelar'
+      );
       if (!confirmChange) {
         return;
       }
@@ -265,15 +327,21 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     this.loadAgendamentos();
   }
 
-  toggleTimeSlot(slot: TimeSlot) {
+  async toggleTimeSlot(slot: TimeSlot) {
     if (slot.originalStatus === 'ocupado') {
-      alert('Este horário já está ocupado com um agendamento e não pode ser alterado.');
+      await this.showInfoAlert(
+        'Horário Ocupado',
+        'Este horário já está ocupado com um agendamento e não pode ser alterado.'
+      );
       return;
     }
 
     // Verificar se o horário está no período de almoço do profissional selecionado
     if (this.isHorarioAlmoco(slot.time)) {
-      alert('Este horário está no período de almoço do profissional e não pode ser liberado.');
+      await this.showInfoAlert(
+        'Período de Almoço',
+        'Este horário está no período de almoço do profissional e não pode ser liberado.'
+      );
       return;
     }
 
@@ -386,9 +454,12 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     });
   }
 
-  salvarAlteracoes() {
+  async salvarAlteracoes() {
     if (this.pendingChanges.length === 0) {
-      alert('Nenhuma alteração para salvar.');
+      await this.showInfoAlert(
+        'Nenhuma Alteração',
+        'Nenhuma alteração para salvar.'
+      );
       return;
     }
 
@@ -403,26 +474,31 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     };
 
     this.api.salvarHorariosBatch(batchData).subscribe({
-      next: (res) => {
+      next: async (res) => {
         if (res.success) {
-          alert('Alterações salvas com sucesso!');
+          await this.showSuccessAlert('Alterações salvas com sucesso!');
           this.clearPendingChanges();
           this.loadAgendamentos(); // Recarrega para sincronizar com o banco
         } else {
-          alert(res.message || 'Erro ao salvar alterações');
+          await this.showErrorAlert(res.message || 'Erro ao salvar alterações');
         }
       },
-      error: (err) => {
-        alert('Erro ao comunicar com o servidor');
+      error: async (err) => {
+        await this.showErrorAlert('Erro ao comunicar com o servidor');
         console.error('Erro ao salvar:', err);
       }
     });
   }
 
-  descartarAlteracoes() {
+  async descartarAlteracoes() {
     if (!this.hasUnsavedChanges) return;
 
-    const confirmDiscard = confirm('Tem certeza que deseja descartar todas as alterações?');
+    const confirmDiscard = await this.showConfirmAlert(
+      'Descartar Alterações',
+      'Tem certeza que deseja descartar todas as alterações?',
+      'Sim, descartar',
+      'Cancelar'
+    );
     if (confirmDiscard) {
       this.timeSlots.forEach(slot => {
         slot.status = slot.originalStatus;
@@ -677,9 +753,12 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     }
   }
 
-  liberarHorariosEspecificos() {
+  async liberarHorariosEspecificos() {
     if (!this.selectedDate) {
-      alert('Selecione uma data primeiro');
+      await this.showInfoAlert(
+        'Data Necessária',
+        'Selecione uma data primeiro'
+      );
       return;
     }
 
@@ -703,24 +782,27 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     };
 
     this.api.salvarHorariosBatch(batchData).subscribe({
-      next: (res) => {
+      next: async (res) => {
         if (res.success) {
-          alert(`Horários liberados com sucesso! ${alteracoes.length} horários liberados.`);
+          await this.showSuccessAlert(`Horários liberados com sucesso! ${alteracoes.length} horários liberados.`);
           this.loadAgendamentos(); // Recarrega para sincronizar
         } else {
-          alert(res.message || 'Erro ao liberar horários');
+          await this.showErrorAlert(res.message || 'Erro ao liberar horários');
         }
       },
-      error: (err) => {
-        alert('Erro ao comunicar com o servidor');
+      error: async (err) => {
+        await this.showErrorAlert('Erro ao comunicar com o servidor');
         console.error('Erro ao liberar horários:', err);
       }
     });
   }
 
-  liberarSemanaEspecifica() {
+  async liberarSemanaEspecifica() {
     if (!this.selectedDate) {
-      alert('Selecione uma data primeiro');
+      await this.showInfoAlert(
+        'Data Necessária',
+        'Selecione uma data primeiro'
+      );
       return;
     }
 
@@ -742,9 +824,9 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     let diasProcessados = 0;
     const totalDias = 7;
 
-    const processarProximoDia = () => {
+    const processarProximoDia = async () => {
       if (diasProcessados >= totalDias) {
-        alert(`Semana liberada com sucesso! De ${this.selectedDate} até ${dataFimString}`);
+        await this.showSuccessAlert(`Semana liberada com sucesso! De ${this.selectedDate} até ${dataFimString}`);
         this.loadAgendamentos();
         return;
       }
@@ -770,8 +852,8 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
           diaAtual.setDate(diaAtual.getDate() + 1);
           processarProximoDia();
         },
-        error: (err) => {
-          alert(`Erro ao liberar horários para ${dataAtualString}`);
+        error: async (err) => {
+          await this.showErrorAlert(`Erro ao liberar horários para ${dataAtualString}`);
           console.error('Erro ao liberar semana:', err);
         }
       });

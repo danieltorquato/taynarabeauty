@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonLabel, IonSelect, IonSelectOption, IonDatetime, IonIcon, IonSegmentButton, IonSegment, IonModal, IonTextarea, IonItem } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonLabel, IonSelect, IonSelectOption, IonDatetime, IonIcon, IonSegmentButton, IonSegment, IonModal, IonTextarea, IonItem, AlertController } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
@@ -43,9 +43,67 @@ export class AgendamentosAdminPage implements OnInit {
   constructor(
     private authService: AuthService,
     private api: ApiService,
-    private router: Router
+    private router: Router,
+    private alertController: AlertController
   ) {
     addIcons({refreshOutline,addOutline,timeOutline,calendarOutline,personOutline,informationCircleOutline,checkmarkCircleOutline,closeCircleOutline,removeCircleOutline,closeOutline,filterOutline});
+  }
+
+  // Mostrar alert de confirmação
+  async showConfirmAlert(
+    title: string,
+    message: string,
+    confirmText: string = 'Sim',
+    cancelText: string = 'Cancelar'
+  ): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertController.create({
+        header: title,
+        message: message,
+        buttons: [
+          {
+            text: cancelText,
+            role: 'cancel',
+            handler: () => resolve(false)
+          },
+          {
+            text: confirmText,
+            handler: () => resolve(true)
+          }
+        ]
+      });
+      await alert.present();
+    });
+  }
+
+  // Mostrar alert de sucesso
+  async showSuccessAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '✅ Sucesso',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert simples de informação
+  async showInfoAlert(title: string, message: string) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
   }
 
   ngOnInit() {
@@ -166,18 +224,24 @@ export class AgendamentosAdminPage implements OnInit {
     this.selectedAgendamento = null;
   }
 
-  aprovarAgendamento(agendamento: any) {
-    if (confirm('Deseja aprovar este agendamento?')) {
+  async aprovarAgendamento(agendamento: any) {
+    const confirmed = await this.showConfirmAlert(
+      'Aprovar Agendamento',
+      'Deseja aprovar este agendamento?',
+      'Sim, aprovar',
+      'Cancelar'
+    );
+    if (confirmed) {
       this.api.aprovarAgendamento(agendamento.id).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Agendamento aprovado com sucesso!');
+            this.showSuccessAlert('Agendamento aprovado com sucesso!');
             this.carregarAgendamentos();
           }
         },
         error: (err) => {
           console.error('Erro ao aprovar agendamento:', err);
-          alert('Erro ao aprovar agendamento');
+          this.showErrorAlert('Erro ao aprovar agendamento');
         }
       });
     }
@@ -189,30 +253,36 @@ export class AgendamentosAdminPage implements OnInit {
       this.api.rejeitarAgendamento(agendamento.id, motivo).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Agendamento rejeitado. Os horários foram liberados.');
+            this.showSuccessAlert('Agendamento rejeitado. Os horários foram liberados.');
             this.carregarAgendamentos();
           }
         },
         error: (err) => {
           console.error('Erro ao rejeitar agendamento:', err);
-          alert('Erro ao rejeitar agendamento');
+          this.showErrorAlert('Erro ao rejeitar agendamento');
         }
       });
     }
   }
 
-  marcarFalta(agendamento: any) {
-    if (confirm('Confirma que o cliente faltou a este agendamento?')) {
+  async marcarFalta(agendamento: any) {
+    const confirmed = await this.showConfirmAlert(
+      'Registrar Falta',
+      'Confirma que o cliente faltou a este agendamento?',
+      'Sim, registrar falta',
+      'Cancelar'
+    );
+    if (confirmed) {
       this.api.marcarFaltaAgendamento(agendamento.id).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Falta registrada. Os horários foram liberados.');
+            this.showSuccessAlert('Falta registrada. Os horários foram liberados.');
             this.carregarAgendamentos();
           }
         },
         error: (err) => {
           console.error('Erro ao marcar falta:', err);
-          alert('Erro ao marcar falta');
+          this.showErrorAlert('Erro ao marcar falta');
         }
       });
     }
@@ -232,7 +302,7 @@ export class AgendamentosAdminPage implements OnInit {
 
   desmarcarAgendamento() {
     if (!this.unmarkJustification.trim()) {
-      alert('Por favor, informe a justificativa para desmarcar o agendamento.');
+      this.showInfoAlert('Justificativa Necessária', 'Por favor, informe a justificativa para desmarcar o agendamento.');
       return;
     }
 
@@ -241,30 +311,36 @@ export class AgendamentosAdminPage implements OnInit {
         if (res.success) {
           this.carregarAgendamentos();
           this.fecharModalDesmarcar();
-          alert('Agendamento desmarcado com sucesso!');
+          this.showSuccessAlert('Agendamento desmarcado com sucesso!');
         } else {
-          alert('Erro ao desmarcar agendamento: ' + res.message);
+          this.showErrorAlert('Erro ao desmarcar agendamento: ' + res.message);
         }
       },
       error: (err) => {
         console.error('Erro ao desmarcar agendamento:', err);
-        alert('Erro ao desmarcar agendamento');
+        this.showErrorAlert('Erro ao desmarcar agendamento');
       }
     });
   }
 
-  cancelarAgendamento(agendamento: any) {
-    if (confirm('Deseja cancelar este agendamento? Os horários serão liberados.')) {
+  async cancelarAgendamento(agendamento: any) {
+    const confirmed = await this.showConfirmAlert(
+      'Cancelar Agendamento',
+      'Deseja cancelar este agendamento? Os horários serão liberados.',
+      'Sim, cancelar',
+      'Cancelar'
+    );
+    if (confirmed) {
       this.api.cancelarAgendamentoAdmin(agendamento.id).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Agendamento cancelado. Os horários foram liberados.');
+            this.showSuccessAlert('Agendamento cancelado. Os horários foram liberados.');
             this.carregarAgendamentos();
           }
         },
         error: (err) => {
           console.error('Erro ao cancelar agendamento:', err);
-          alert('Erro ao cancelar agendamento');
+          this.showErrorAlert('Erro ao cancelar agendamento');
         }
       });
     }
@@ -389,7 +465,7 @@ export class AgendamentosAdminPage implements OnInit {
 
   criarAgendamentoAdmin() {
     if (!this.selectedProcedimento || !this.selectedDate || !this.selectedTime || !this.clienteNome) {
-      alert('Preencha todos os campos obrigatórios.');
+      this.showInfoAlert('Campos Obrigatórios', 'Preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -406,11 +482,11 @@ export class AgendamentosAdminPage implements OnInit {
     this.api.createAppointment(payload).subscribe({
       next: (res) => {
         if (res.success) {
-          alert('Agendamento criado com sucesso!');
+          this.showSuccessAlert('Agendamento criado com sucesso!');
           this.fecharFormularioAgendamento();
           this.carregarAgendamentos();
         } else {
-          alert(res.message || 'Erro ao criar agendamento.');
+          this.showErrorAlert(res.message || 'Erro ao criar agendamento.');
         }
       },
       error: (err) => {

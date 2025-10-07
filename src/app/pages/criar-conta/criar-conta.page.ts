@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-import { IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon, IonItem, IonLabel, IonInput, IonCard, IonCardContent, IonCheckbox, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonButton, IonIcon, IonItem, IonLabel, IonInput, IonCard, IonCardContent, IonCheckbox, IonSpinner, AlertController } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
@@ -30,9 +30,40 @@ export class CriarContaPage implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private authService: AuthService,
-    private api: ApiService
+    private api: ApiService,
+    private alertController: AlertController
   ) {
     addIcons({ personAddOutline, eyeOutline, eyeOffOutline });
+  }
+
+  // Mostrar alert de sucesso
+  async showSuccessAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '✅ Sucesso',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert simples de informação
+  async showInfoAlert(title: string, message: string) {
+    const alert = await this.alertController.create({
+      header: title,
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
   }
 
   ngOnInit() {
@@ -154,18 +185,18 @@ export class CriarContaPage implements OnInit {
                     });
                   }
                 } else {
-                  alert('Conta criada, mas houve um problema no login. Tente fazer login manualmente.');
+                  this.showInfoAlert('Conta Criada', 'Conta criada, mas houve um problema no login. Tente fazer login manualmente.');
                   this.router.navigate(['/login']);
                 }
               },
               error: (error) => {
                 console.error('Erro no login automático:', error);
-                alert('Conta criada com sucesso! Faça login para continuar.');
+                this.showSuccessAlert('Conta criada com sucesso! Faça login para continuar.');
                 this.router.navigate(['/login']);
               }
             });
           } else {
-            alert(response.message || 'Erro ao criar conta. Tente novamente.');
+            this.showErrorAlert(response.message || 'Erro ao criar conta. Tente novamente.');
           }
         },
         error: (error) => {
@@ -173,11 +204,11 @@ export class CriarContaPage implements OnInit {
           console.error('Erro ao criar conta:', error);
 
           if (error.error?.message) {
-            alert(error.error.message);
+            this.showErrorAlert(error.error.message);
           } else if (error.status === 409) {
-            alert('Este email já está em uso. Tente fazer login ou use outro email.');
+            this.showErrorAlert('Este email já está em uso. Tente fazer login ou use outro email.');
           } else {
-            alert('Erro ao criar conta. Verifique sua conexão e tente novamente.');
+            this.showErrorAlert('Erro ao criar conta. Verifique sua conexão e tente novamente.');
           }
         }
       });
@@ -202,12 +233,12 @@ export class CriarContaPage implements OnInit {
   openTerms(event: Event) {
     event.preventDefault();
     // Implementar modal ou página de termos
-    alert('Termos e condições serão exibidos aqui.');
+    this.showInfoAlert('Termos e Condições', 'Termos e condições serão exibidos aqui.');
   }
 
   openPrivacy(event: Event) {
     event.preventDefault();
     // Implementar modal ou página de política de privacidade
-    alert('Política de privacidade será exibida aqui.');
+    this.showInfoAlert('Política de Privacidade', 'Política de privacidade será exibida aqui.');
   }
 }

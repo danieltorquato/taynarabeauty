@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem, IonTextarea } from '@ionic/angular/standalone';
+import { IonContent, IonCard, IonCardHeader, IonCardContent, IonButton, IonChip, IonHeader, IonToolbar, IonTitle, IonBackButton, IonButtons, IonIcon, IonSegmentButton, IonSegment, IonLabel, IonModal, IonList, IonItem, IonTextarea, AlertController } from '@ionic/angular/standalone';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../services/api.service';
 import { addIcons } from 'ionicons';
@@ -38,9 +38,57 @@ export class MeusAgendamentosPage implements OnInit {
   constructor(
     public authService: AuthService,
     private api: ApiService,
-    private router: Router
+    private router: Router,
+    private alertController: AlertController
   ) {
     addIcons({timeOutline,calendarOutline,personOutline,informationCircleOutline,closeCircleOutline,closeOutline,alertCircleOutline,checkmarkCircleOutline,schoolOutline,checkmarkOutline,closeIcon,chatbubbleOutline});
+  }
+
+  // Mostrar alert de confirmação
+  async showConfirmAlert(
+    title: string,
+    message: string,
+    confirmText: string = 'Sim',
+    cancelText: string = 'Cancelar'
+  ): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertController.create({
+        header: title,
+        message: message,
+        buttons: [
+          {
+            text: cancelText,
+            role: 'cancel',
+            handler: () => resolve(false)
+          },
+          {
+            text: confirmText,
+            handler: () => resolve(true)
+          }
+        ]
+      });
+      await alert.present();
+    });
+  }
+
+  // Mostrar alert de sucesso
+  async showSuccessAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '✅ Sucesso',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  // Mostrar alert de erro
+  async showErrorAlert(message: string) {
+    const alert = await this.alertController.create({
+      header: '❌ Erro',
+      message: message,
+      buttons: ['OK']
+    });
+    await alert.present();
   }
 
   ngOnInit() {
@@ -237,18 +285,24 @@ export class MeusAgendamentosPage implements OnInit {
     this.selectedAgendamento = null;
   }
 
-  cancelarAgendamento(agendamento: any) {
-    if (confirm('Deseja realmente cancelar este agendamento?')) {
+  async cancelarAgendamento(agendamento: any) {
+    const confirmed = await this.showConfirmAlert(
+      'Cancelar Agendamento',
+      'Deseja realmente cancelar este agendamento?',
+      'Sim, cancelar',
+      'Não'
+    );
+    if (confirmed) {
       this.api.cancelarAgendamento(agendamento.id).subscribe({
         next: (res) => {
           if (res.success) {
-            alert('Agendamento cancelado com sucesso!');
+            this.showSuccessAlert('Agendamento cancelado com sucesso!');
             this.carregarAgendamentos();
           }
         },
         error: (err) => {
           console.error('Erro ao cancelar agendamento:', err);
-          alert('Erro ao cancelar agendamento');
+          this.showErrorAlert('Erro ao cancelar agendamento');
         }
       });
     }
