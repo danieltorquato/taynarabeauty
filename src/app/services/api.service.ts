@@ -95,6 +95,13 @@ export class ApiService {
     );
   }
 
+  getAgendamentosPorData(data: string): Observable<any> {
+    const url = `${this.baseUrl}/admin/agendamentos?data=${data}`;
+    return from(this.getAuthHeaders()).pipe(
+      switchMap(headers => this.http.get(url, { headers }))
+    );
+  }
+
   liberarDia(data: string): Observable<any> {
     const url = `${this.baseUrl}/admin/horarios/liberar-dia`;
     return from(this.getAuthHeaders()).pipe(

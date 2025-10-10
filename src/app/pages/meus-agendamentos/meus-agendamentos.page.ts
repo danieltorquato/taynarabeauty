@@ -92,97 +92,62 @@ export class MeusAgendamentosPage implements OnInit {
   }
 
   ngOnInit() {
-    console.log('=== MEUS AGENDAMENTOS - ngOnInit ===');
-    console.log('AuthService inicializado:', this.authService._initialized);
-    console.log('Usuário atual:', this.authService.currentUser);
-    console.log('Está autenticado:', this.authService.isAuthenticated);
     this.carregarAgendamentos();
   }
 
   carregarAgendamentos() {
-    console.log('=== CARREGANDO AGENDAMENTOS ===');
     this.loading = true;
-    console.log('Loading set to true');
-
     this.api.getMeusAgendamentos().subscribe({
       next: (res) => {
-        console.log('Resposta da API recebida:', res);
         this.loading = false;
-        console.log('Loading set to false');
-
         if (res.success) {
           let agendamentos = res.agendamentos || [];
-          console.log('Agendamentos recebidos:', agendamentos.length);
-
           // Filtrar agendamentos baseado no role do usuário
           const currentUser = this.authService.currentUser;
-          console.log('Usuário atual para filtro:', currentUser);
-
           if (currentUser) {
             if (currentUser.role === 'admin' || currentUser.role === 'recepcao') {
               // Admin e recepção veem todos os agendamentos
               this.agendamentos = agendamentos;
-              console.log('Filtro admin/recepção aplicado:', this.agendamentos.length);
             } else if (currentUser.role === 'profissional') {
               // Profissional vê apenas agendamentos onde ele é responsável
               this.agendamentos = agendamentos.filter((ag: any) =>
                 ag.profissional_id === currentUser.id || ag.profissional_id == currentUser.id
               );
-              console.log('Filtro profissional aplicado:', this.agendamentos.length);
             } else {
               // Cliente vê apenas seus próprios agendamentos
               this.agendamentos = agendamentos;
-              console.log('Filtro cliente aplicado:', this.agendamentos.length);
             }
           } else {
             this.agendamentos = agendamentos;
-            console.log('Sem usuário, usando todos os agendamentos:', this.agendamentos.length);
           }
-
-          console.log('Agendamentos finais:', this.agendamentos);
-          console.log('Chamando separarAgendamentos...');
           // Separar agendamentos ativos dos concluídos
           this.separarAgendamentos();
-          console.log('Chamando filtrarAgendamentos...');
           this.filtrarAgendamentos();
-          console.log('Agendamentos filtrados:', this.agendamentosFiltrados.length);
         } else {
-          console.log('API retornou success: false');
           this.agendamentos = [];
           this.agendamentosAtivos = [];
           this.agendamentosConcluidos = [];
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar agendamentos:', err);
         this.loading = false;
-        console.log('Loading set to false devido ao erro');
-
         // Fallback com dados simulados
         this.agendamentos = [];
         this.agendamentosAtivos = [];
         this.agendamentosConcluidos = [];
-        console.log('Arrays resetados devido ao erro');
       }
     });
   }
 
   separarAgendamentos() {
-    console.log('=== SEPARANDO AGENDAMENTOS ===');
-    console.log('Agendamentos para separar:', this.agendamentos.length);
-
     // Obter data atual no formato YYYY-MM-DD sem problemas de fuso horário
     const hoje = new Date();
     const hojeStr = hoje.getFullYear() + '-' +
                    String(hoje.getMonth() + 1).padStart(2, '0') + '-' +
                    String(hoje.getDate()).padStart(2, '0');
-
-    console.log('Data atual para separação:', hojeStr);
-
     // Marcar localmente agendamentos pendentes com data passada como expirados
     this.agendamentos.forEach(ag => {
       if (ag.status === 'pendente' && ag.data < hojeStr) {
-        console.log(`Marcando agendamento ${ag.id} como expirado (data: ${ag.data})`);
         ag.status = 'expirado';
       }
     });
@@ -193,40 +158,27 @@ export class MeusAgendamentosPage implements OnInit {
       const dataFuturaOuHoje = ag.data >= hojeStr;
       return statusAtivo && dataFuturaOuHoje;
     });
-
-    console.log('Agendamentos ativos encontrados:', this.agendamentosAtivos.length);
-
     this.agendamentosConcluidos = this.agendamentos.filter((ag: any) => {
       // Agendamentos concluídos: rejeitados, cancelados, faltou, expirados ou passados
       const statusConcluido = ag.status === 'rejeitado' || ag.status === 'cancelado' || ag.status === 'faltou' || ag.status === 'expirado';
       const dataPassada = ag.data < hojeStr;
       return statusConcluido || dataPassada;
     });
-
-    console.log('Agendamentos concluídos encontrados:', this.agendamentosConcluidos.length);
-
     // Atualizar agendamentos expirados no backend (assíncrono, não bloqueia a UI)
     this.atualizarAgendamentosExpirados();
   }
 
   filtrarAgendamentos() {
-    console.log('=== FILTRANDO AGENDAMENTOS ===');
-    console.log('Segmento selecionado:', this.selectedSegment);
-    console.log('Agendamentos ativos disponíveis:', this.agendamentosAtivos.length);
-    console.log('Agendamentos totais disponíveis:', this.agendamentos.length);
-
     let agendamentosFiltrados: any[] = [];
 
     if (this.selectedSegment === 'todos') {
       // Na tela principal, mostrar apenas agendamentos ativos
       agendamentosFiltrados = [...this.agendamentosAtivos];
-      console.log('Filtro "todos" aplicado - agendamentos ativos:', agendamentosFiltrados.length);
     } else {
       // Para filtros específicos, usar todos os agendamentos
       agendamentosFiltrados = this.agendamentos.filter((ag: any) => {
         return ag.status === this.selectedSegment;
       });
-      console.log(`Filtro "${this.selectedSegment}" aplicado:`, agendamentosFiltrados.length);
     }
 
     // Ordenar agendamentos: pendentes primeiro, depois aprovados, depois por data
@@ -253,9 +205,6 @@ export class MeusAgendamentosPage implements OnInit {
       const bDateTime = new Date(b.data + ' ' + b.hora).getTime();
       return bDateTime - aDateTime;
     });
-
-    console.log('Agendamentos filtrados finais:', this.agendamentosFiltrados.length);
-    console.log('Agendamentos filtrados:', this.agendamentosFiltrados);
   }
 
   onSegmentChange() {
@@ -301,7 +250,6 @@ export class MeusAgendamentosPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao cancelar agendamento:', err);
           this.showErrorAlert('Erro ao cancelar agendamento');
         }
       });
@@ -357,7 +305,6 @@ export class MeusAgendamentosPage implements OnInit {
       const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       return date.toLocaleDateString('pt-BR');
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return data || '';
     }
   }
@@ -367,7 +314,6 @@ export class MeusAgendamentosPage implements OnInit {
       if (!hora) return '';
       return hora.substring(0, 5);
     } catch (error) {
-      console.error('Erro ao formatar hora:', error);
       return hora || '';
     }
   }
@@ -381,7 +327,6 @@ export class MeusAgendamentosPage implements OnInit {
     try {
       return this.authService?.currentUser?.role === 'admin';
     } catch (error) {
-      console.error('Erro ao verificar se é admin:', error);
       return false;
     }
   }
@@ -390,7 +335,6 @@ export class MeusAgendamentosPage implements OnInit {
     try {
       return this.authService?.currentUser?.role === 'profissional';
     } catch (error) {
-      console.error('Erro ao verificar se é profissional:', error);
       return false;
     }
   }
@@ -399,7 +343,6 @@ export class MeusAgendamentosPage implements OnInit {
     try {
       return this.isAdmin() || this.isProfissional();
     } catch (error) {
-      console.error('Erro ao verificar permissões:', error);
       return false;
     }
   }
@@ -447,14 +390,11 @@ export class MeusAgendamentosPage implements OnInit {
           }
           this.filtrarAgendamentos();
           this.fecharModais();
-          console.log('Agendamento aprovado com sucesso');
         } else {
-          console.error('Erro ao aprovar agendamento:', res.message);
         }
       },
       error: (err) => {
         this.isProcessing = false;
-        console.error('Erro ao aprovar agendamento:', err);
       }
     });
   }
@@ -481,14 +421,11 @@ export class MeusAgendamentosPage implements OnInit {
           }
           this.filtrarAgendamentos();
           this.fecharModais();
-          console.log('Agendamento rejeitado com sucesso');
         } else {
-          console.error('Erro ao rejeitar agendamento:', res.message);
         }
       },
       error: (err) => {
         this.isProcessing = false;
-        console.error('Erro ao rejeitar agendamento:', err);
       }
     });
   }
@@ -497,11 +434,9 @@ export class MeusAgendamentosPage implements OnInit {
     this.api.atualizarAgendamentosExpirados().subscribe({
       next: (res) => {
         if (res.success && res.count > 0) {
-          console.log(`${res.count} agendamentos expirados atualizados no backend`);
         }
       },
       error: (err) => {
-        console.error('Erro ao atualizar agendamentos expirados:', err);
         // Mesmo com erro, continuar com a lógica local
       }
     });

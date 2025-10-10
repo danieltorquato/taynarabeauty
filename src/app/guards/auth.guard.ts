@@ -18,11 +18,7 @@ export class AuthGuard implements CanActivate {
       filter(() => this.authService._initialized), // Aguardar inicialização
       take(1),
       map(isAuthenticated => {
-        console.log('AuthGuard - isAuthenticated:', isAuthenticated);
-        console.log('AuthGuard - currentUser:', this.authService.currentUser);
-
         if (!isAuthenticated || !this.authService.currentUser) {
-          console.log('AuthGuard - Redirecionando para login');
           this.router.navigate(['/login']);
           return false;
         }

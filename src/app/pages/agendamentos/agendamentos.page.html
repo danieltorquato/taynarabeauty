@@ -49,8 +49,8 @@
             <!-- Cílios -->
             <div
               class="procedimento-card"
-              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('cilios')"
-              (click)="setProcedimento(getProcedimentoIdByCategoria('cilios'))">
+              [class.selected]="selectedProcedimento === ciliosProcedimentoId"
+              (click)="setProcedimento(ciliosProcedimentoId)">
               <div class="procedimento-icon">
                 <ion-icon name="eye-outline"></ion-icon>
               </div>
@@ -60,8 +60,8 @@
             <!-- Lábios -->
             <div
               class="procedimento-card"
-              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('labios')"
-              (click)="setProcedimento(getProcedimentoIdByCategoria('labios'))">
+              [class.selected]="selectedProcedimento === labiosProcedimentoId"
+              (click)="setProcedimento(labiosProcedimentoId)">
               <div class="procedimento-icon">
                 <ion-icon name="eyedrop-outline"></ion-icon>
               </div>
@@ -71,8 +71,8 @@
             <!-- Combo -->
             <div
               class="procedimento-card combo-card"
-              [class.selected]="selectedProcedimento === getProcedimentoIdByCategoria('combo')"
-              (click)="setProcedimento(getProcedimentoIdByCategoria('combo'))">
+              [class.selected]="selectedProcedimento === comboProcedimentoId"
+              (click)="setProcedimento(comboProcedimentoId)">
               <div class="procedimento-icon combo-icon">
                 <div class="combo-left">
                   <ion-icon name="eye-outline"></ion-icon>
@@ -280,16 +280,16 @@
       </ng-container>
 
       <!-- Combo: Cílios + Lábios -->
-      <ng-container *ngIf="isComboSelected">
+      <ng-container *ngIf="isComboSelected && procedimentos && procedimentos.length > 0">
         <div class="combo-section">
           <h3>Opções de Combo</h3>
 
           <!-- Tipo de cílios para combo -->
-          <ng-container *ngIf="getComboCiliosTypeOptions().length > 0">
+          <ng-container *ngIf="comboCiliosTypeOptions && comboCiliosTypeOptions.length > 0">
             <ion-label class="section-label">Tipo de cílios</ion-label>
             <div class="options-grid">
               <div
-                *ngFor="let opt of getComboCiliosTypeOptions()"
+                *ngFor="let opt of comboCiliosTypeOptions; trackBy: trackByOptionId"
                 class="option-item">
                 <div
                   class="option-card"
@@ -309,11 +309,11 @@
           </ng-container>
 
           <!-- Cor dos cílios para combo -->
-          <ng-container *ngIf="getComboCiliosCorOptions().length > 0">
+          <ng-container *ngIf="comboCiliosCorOptions && comboCiliosCorOptions.length > 0">
             <ion-label class="section-label">Cor dos cílios</ion-label>
             <div class="options-grid">
               <div
-                *ngFor="let c of getComboCiliosCorOptions()"
+                *ngFor="let c of comboCiliosCorOptions; trackBy: trackByOptionId"
                 class="option-item">
                 <div
                   class="option-card color-option"
@@ -333,11 +333,11 @@
           </ng-container>
 
           <!-- Cor dos lábios para combo -->
-          <ng-container *ngIf="getComboLabiosCorOptions().length > 0">
+          <ng-container *ngIf="comboLabiosCorOptions && comboLabiosCorOptions.length > 0">
             <ion-label class="section-label">Cor dos lábios</ion-label>
             <div class="options-grid">
               <div
-                *ngFor="let c of getComboLabiosCorOptions()"
+                *ngFor="let c of comboLabiosCorOptions; trackBy: trackByOptionId"
                 class="option-item">
                 <div
                   class="option-card color-option"

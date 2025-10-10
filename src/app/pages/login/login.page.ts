@@ -71,8 +71,6 @@ export class LoginPage implements OnInit, OnDestroy {
       this.showInfoAlert('Campos Obrigatórios', 'Por favor, preencha todos os campos');
       return;
     }
-
-    console.log('Iniciando login para:', this.email);
     this.loading = true;
 
     // Verificar se há agendamento pendente
@@ -82,11 +80,9 @@ export class LoginPage implements OnInit, OnDestroy {
       // Usar método que confirma agendamento automaticamente
       this.authService.loginAndConfirmAppointment({ email: this.email, password: this.password }).subscribe({
         next: (res) => {
-          console.log('Resposta do login com agendamento:', res);
           this.loading = false;
           if (res && res.success) {
             if (res.appointmentConfirmed) {
-              console.log('Agendamento confirmado, redirecionando...');
               // Redirecionar para página de confirmação com dados do agendamento
               this.router.navigate(['/confirmacao'], {
                 state: {
@@ -102,17 +98,14 @@ export class LoginPage implements OnInit, OnDestroy {
                 }
               });
             } else {
-              console.log('Login bem-sucedido, redirecionando...');
               // Login bem-sucedido mas agendamento não confirmado
               this.redirectBasedOnRole();
             }
           } else {
-            console.error('Falha no login:', res?.message);
             this.showErrorAlert(res?.message || 'Falha no login');
           }
         },
         error: (err) => {
-          console.error('Erro no login:', err);
           this.loading = false;
           this.showErrorAlert(err?.error?.message || 'Erro ao conectar ao servidor');
         }
@@ -121,18 +114,14 @@ export class LoginPage implements OnInit, OnDestroy {
       // Login normal sem agendamento pendente
       this.authService.login({ email: this.email, password: this.password }).subscribe({
         next: (res) => {
-          console.log('Resposta do login normal:', res);
           this.loading = false;
           if (res && res.success) {
-            console.log('Login bem-sucedido, redirecionando...');
             this.redirectBasedOnRole();
           } else {
-            console.error('Falha no login:', res?.message);
             this.showErrorAlert(res?.message || 'Falha no login');
           }
         },
         error: (err) => {
-          console.error('Erro no login:', err);
           this.loading = false;
           this.showErrorAlert(err?.error?.message || 'Erro ao conectar ao servidor');
         }
@@ -142,32 +131,24 @@ export class LoginPage implements OnInit, OnDestroy {
 
   private redirectBasedOnRole() {
     const user = this.authService.currentUser;
-    console.log('Redirecionando usuário:', user);
-
     if (!user) {
-      console.error('Usuário não encontrado para redirecionamento');
       return;
     }
 
     switch (user.role) {
       case 'admin':
-        console.log('Redirecionando admin para home');
         this.router.navigateByUrl('/');
         break;
       case 'recepcao':
-        console.log('Redirecionando recepção para dashboard');
         this.router.navigateByUrl('/dashboard-admin');
         break;
       case 'profissional':
-        console.log('Redirecionando profissional para home');
         this.router.navigateByUrl('/');
         break;
       case 'cliente':
-        console.log('Redirecionando cliente para home');
         this.router.navigateByUrl('/');
         break;
       default:
-        console.log('Redirecionando para home (role padrão)');
         this.router.navigateByUrl('/home');
     }
   }

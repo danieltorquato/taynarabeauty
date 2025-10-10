@@ -103,7 +103,6 @@ export class NotificationService {
     try {
       localStorage.setItem('notifications', JSON.stringify(this.notifications.value));
     } catch (error) {
-      console.error('Erro ao salvar notificações:', error);
     }
   }
 
@@ -119,7 +118,6 @@ export class NotificationService {
         this.updateUnreadCount();
       }
     } catch (error) {
-      console.error('Erro ao carregar notificações:', error);
     }
   }
 }

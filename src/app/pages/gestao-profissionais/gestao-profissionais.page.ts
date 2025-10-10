@@ -54,7 +54,6 @@ export class GestaoProfissionaisPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar profissionais:', err);
       }
     });
 
@@ -66,7 +65,6 @@ export class GestaoProfissionaisPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar usuários:', err);
       }
     });
 
@@ -78,7 +76,6 @@ export class GestaoProfissionaisPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar procedimentos:', err);
       }
     });
   }
@@ -147,7 +144,6 @@ export class GestaoProfissionaisPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao criar profissional:', err);
       }
     });
   }
@@ -161,7 +157,6 @@ export class GestaoProfissionaisPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao atualizar profissional:', err);
       }
     });
   }
@@ -175,7 +170,6 @@ export class GestaoProfissionaisPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao excluir profissional:', err);
         }
       });
     }

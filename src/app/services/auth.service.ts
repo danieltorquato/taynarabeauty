@@ -60,7 +60,6 @@ export class AuthService {
 
       this._initialized = true;
     } catch (error) {
-      console.error('Erro ao carregar usuário armazenado:', error);
       // Em caso de erro, garantir que o usuário não esteja autenticado
       this._user.next(null);
       this._isAuthenticated.next(false);
@@ -75,10 +74,8 @@ export class AuthService {
 
     // Salvar no storage de forma assíncrona (sem bloquear)
     this.storage.set('user', user).catch(error => {
-      console.error('Erro ao salvar usuário no storage:', error);
     });
     this.storage.set('token', token).catch(error => {
-      console.error('Erro ao salvar token no storage:', error);
     });
   }
 
@@ -89,7 +86,6 @@ export class AuthService {
       this._user.next(null);
       this._isAuthenticated.next(false);
     } catch (error) {
-      console.error('Erro ao fazer logout:', error);
     }
   }
 
@@ -134,8 +130,6 @@ export class AuthService {
 
     try {
       const appointmentData = JSON.parse(savedData);
-      console.log('Dados do agendamento salvos:', appointmentData);
-
       // Preparar dados para a API
       const apiData = {
         procedimento_id: appointmentData.selectedProcedimento,
@@ -147,12 +141,8 @@ export class AuthService {
         cor_cilios: appointmentData.corCilios || undefined,
         opcao_labios: appointmentData.corLabios || undefined,
       };
-
-      console.log('Dados enviados para API de agendamento:', apiData);
-
       return this.api.createAppointment(apiData).pipe(
         switchMap((result: any) => {
-          console.log('Resposta da API de agendamento:', result);
           if (result.success) {
             // Construir dados completos do agendamento para a página de confirmação
             const profissionalId = appointmentData.selectedProfissional === 0 ? this.getNextProfissionalInQueue(appointmentData.selectedProcedimento) : appointmentData.selectedProfissional;
@@ -169,12 +159,6 @@ export class AuthService {
               profissional_nome: profissionalNome,
               observacoes: this.buildObservacoes(appointmentData)
             };
-
-            console.log('Dados completos construídos:', completeAppointmentData);
-            console.log('Profissional selecionado:', appointmentData.selectedProfissional);
-            console.log('Profissional ID final:', profissionalId);
-            console.log('Nome da profissional:', profissionalNome);
-
             // Limpar dados temporários
             localStorage.removeItem('tempAppointmentData');
             return from(Promise.resolve({

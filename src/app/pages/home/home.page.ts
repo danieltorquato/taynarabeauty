@@ -76,7 +76,6 @@ export class HomePage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar dados do profissional:', err);
       }
     });
   }

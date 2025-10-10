@@ -190,7 +190,6 @@ export class CriarContaPage implements OnInit {
                 }
               },
               error: (error) => {
-                console.error('Erro no login automático:', error);
                 this.showSuccessAlert('Conta criada com sucesso! Faça login para continuar.');
                 this.router.navigate(['/login']);
               }
@@ -201,8 +200,6 @@ export class CriarContaPage implements OnInit {
         },
         error: (error) => {
           this.loading = false;
-          console.error('Erro ao criar conta:', error);
-
           if (error.error?.message) {
             this.showErrorAlert(error.error.message);
           } else if (error.status === 409) {

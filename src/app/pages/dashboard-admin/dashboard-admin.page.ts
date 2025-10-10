@@ -253,7 +253,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.loadingAgendamentos = false;
-        console.error('Erro ao carregar agendamentos:', err);
         // Em caso de erro, regenerar horários mesmo assim
         this.generateTimeSlots();
       }
@@ -306,7 +305,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
         });
       },
       error: (err) => {
-        console.error('Erro ao carregar horários:', err);
       }
     });
   }
@@ -485,7 +483,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
       },
       error: async (err) => {
         await this.showErrorAlert('Erro ao comunicar com o servidor');
-        console.error('Erro ao salvar:', err);
       }
     });
   }
@@ -520,19 +517,15 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
   // Novos métodos para liberação específica
   loadProfissionais() {
     this.loadingProfissionais = true;
-    console.log('Carregando profissionais...');
     // Carregar todos os profissionais sem filtro
     this.api.getProfissionais().subscribe({
       next: (res) => {
         this.loadingProfissionais = false;
-        console.log('Resposta da API de profissionais:', res);
         if (res.success) {
           this.profissionais = res.profissionais;
-          console.log('Profissionais carregados:', this.profissionais);
           // Inicializar com todos os procedimentos
           this.procedimentosFiltrados = [...this.procedimentos];
         } else {
-          console.error('Erro na resposta da API:', res.message);
           // Fallback: criar lista de profissionais hardcoded
           this.profissionais = [
             { id: 1, nome: 'Taynara Casagrande', competencias: [1, 2, 3, 5, 6], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
@@ -543,7 +536,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.loadingProfissionais = false;
-        console.error('Erro ao carregar profissionais:', err);
         // Fallback: criar lista de profissionais hardcoded
         this.profissionais = [
           { id: 1, nome: 'Taynara Casagrande', competencias: [1, 2, 3, 5, 6], almoco_inicio: '12:00:00', almoco_fim: '13:00:00' },
@@ -567,7 +559,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.loadingProcedimentos = false;
-        console.error('Erro ao carregar procedimentos:', err);
         // Em caso de erro, mostrar todos os procedimentos
         this.procedimentosFiltrados = [...this.procedimentos];
       }
@@ -576,7 +567,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
 
   selectProfissional(profissionalId: string) {
     this.selectedProfissional = profissionalId;
-    console.log('Profissional selecionado:', this.selectedProfissional);
     this.filtrarProcedimentos();
     // Reset procedimento selecionado quando mudar profissional
     this.selectedProcedimento = '0';
@@ -586,7 +576,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
 
   selectProcedimento(procedimentoId: string) {
     this.selectedProcedimento = procedimentoId;
-    console.log('Procedimento selecionado:', this.selectedProcedimento);
     // Regenerar horários considerando conflitos de duração
     this.generateTimeSlots();
     // Recarregar agendamentos para atualizar dados
@@ -607,28 +596,20 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
   }
 
   filtrarProcedimentos() {
-    console.log('Filtrando procedimentos para profissional:', this.selectedProfissional);
-
     if (this.selectedProfissional === '0') {
       // Se "Todos os profissionais" selecionado, mostrar todos os procedimentos
       this.procedimentosFiltrados = [...this.procedimentos];
-      console.log('Mostrando todos os procedimentos:', this.procedimentosFiltrados.length);
     } else {
       // Buscar procedimentos que o profissional selecionado pode realizar
       const profissional = this.profissionais.find(p => String(p.id) === this.selectedProfissional);
-      console.log('Profissional encontrado para filtro:', profissional);
-
       if (profissional && profissional.competencias) {
         // Usar as competências do profissional se disponíveis
         this.procedimentosFiltrados = this.procedimentos.filter(proc =>
           profissional.competencias.includes(proc.id)
         );
-        console.log('Filtrado por competências:', this.procedimentosFiltrados.length);
       } else {
         // Fallback para lógica hardcoded baseada na categoria
         this.procedimentosFiltrados = this.getProcedimentosPorProfissional(profissional);
-        console.log('Filtrado por lógica hardcoded:', this.procedimentosFiltrados.length);
-        console.log('Procedimentos filtrados:', this.procedimentosFiltrados);
       }
     }
 
@@ -665,8 +646,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
   }
 
   private getProcedimentosPorProfissional(profissional: any): any[] {
-    console.log('getProcedimentosPorProfissional chamado com:', profissional);
-
     // Lógica hardcoded baseada nas especializações conhecidas
     const especializacoes: { [key: string]: string[] } = {
       '1': ['cilios'], // Taynara - Cílios
@@ -676,24 +655,16 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
 
     // Converter ID para string para comparar corretamente
     const profissionalId = String(profissional?.id);
-    console.log('Profissional ID extraído (string):', profissionalId);
-
     const categorias = especializacoes[profissionalId] || [];
-    console.log('Categorias para filtrar:', categorias);
-
     if (categorias.length === 0) {
       // Se não tem especializações definidas, retornar todos
-      console.log('Nenhuma categoria encontrada, retornando todos os procedimentos');
       return [...this.procedimentos];
     }
 
     // Filtrar procedimentos baseado nas categorias
     const procedimentosFiltrados = this.procedimentos.filter(proc => {
-      console.log(`Verificando procedimento ${proc.nome} (categoria: ${proc.categoria})`);
       return categorias.includes(proc.categoria);
     });
-
-    console.log('Procedimentos filtrados finais:', procedimentosFiltrados);
     return procedimentosFiltrados;
   }
 
@@ -708,19 +679,12 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
     }
 
     const profissionalId = parseInt(this.selectedProfissional);
-    console.log('Buscando profissional com ID:', profissionalId, 'tipo:', typeof profissionalId);
-    console.log('Lista de profissionais:', this.profissionais);
-
     // Verificar os tipos de ID na lista
     this.profissionais.forEach((p, index) => {
-      console.log(`Profissional ${index}: ID=${p.id}, tipo=${typeof p.id}, nome=${p.nome}`);
     });
 
     // Buscar profissional usando string (já que os IDs vêm como string)
     const profissional = this.profissionais.find(p => String(p.id) === this.selectedProfissional);
-
-    console.log('Profissional encontrado:', profissional);
-
     return profissional ? profissional.nome : 'profissional não encontrado';
   }
 
@@ -792,7 +756,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
       },
       error: async (err) => {
         await this.showErrorAlert('Erro ao comunicar com o servidor');
-        console.error('Erro ao liberar horários:', err);
       }
     });
   }
@@ -854,7 +817,6 @@ export class DashboardAdminPage implements OnInit, OnDestroy {
         },
         error: async (err) => {
           await this.showErrorAlert(`Erro ao liberar horários para ${dataAtualString}`);
-          console.error('Erro ao liberar semana:', err);
         }
       });
     };

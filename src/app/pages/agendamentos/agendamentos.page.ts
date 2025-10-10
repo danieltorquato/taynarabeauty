@@ -22,7 +22,7 @@ export class AgendamentoPage implements OnInit {
   opcoes: any = {};
   selectedProcedimento: number = 0;
   selectedProfissional: number = 0; // 0 = Sem preferência
-  selectedDate: string = '';
+  selectedDate: string = new Date().toISOString();
   selectedTime: string = '';
   note: string = '';
   tipoCilios: string = '';
@@ -43,8 +43,49 @@ export class AgendamentoPage implements OnInit {
   currentDuration = 0;
   selectedOptions: any[] = [];
 
-  // Data mínima para o calendário (hoje)
-  minDate = new Date().toISOString();
+  // Cache para opções do combo (evita recálculos desnecessários)
+  private _comboCiliosTypeOptions: any[] = [];
+  private _comboCiliosCorOptions: any[] = [];
+  private _comboLabiosCorOptions: any[] = [];
+  private _comboOptionsCacheValid = false;
+
+  // Propriedades públicas para o template (evita chamadas múltiplas)
+  get comboCiliosTypeOptions(): any[] {
+    if (!this.isComboSelected) {
+      return [];
+    }
+    return this.getComboCiliosTypeOptions();
+  }
+
+  get comboCiliosCorOptions(): any[] {
+    if (!this.isComboSelected) {
+      return [];
+    }
+    return this.getComboCiliosCorOptions();
+  }
+
+  get comboLabiosCorOptions(): any[] {
+    if (!this.isComboSelected) {
+      return [];
+    }
+    return this.getComboLabiosCorOptions();
+  }
+
+  // IDs dos procedimentos por categoria (evita chamadas múltiplas no template)
+  get ciliosProcedimentoId(): number {
+    return this.getProcedimentoIdByCategoria('cilios');
+  }
+
+  get labiosProcedimentoId(): number {
+    return this.getProcedimentoIdByCategoria('labios');
+  }
+
+  get comboProcedimentoId(): number {
+    return this.getProcedimentoIdByCategoria('combo');
+  }
+
+  // Data mínima para o calendário (será calculada dinamicamente)
+  minDate = '';
 
   // Cores de cílios disponíveis
   cilioCores = [
@@ -57,7 +98,6 @@ export class AgendamentoPage implements OnInit {
   meusAgendamentosFiltrados: any[] = [];
   hasActiveAppointment = false;
   selectedSegment = 'todos';
-
 
   constructor(private storage: Storage, private router: Router, private api: ApiService, private route: ActivatedRoute, public authService: AuthService, private alertController: AlertController) {
     // Registrar ícones
@@ -84,9 +124,53 @@ export class AgendamentoPage implements OnInit {
     await alert.present();
   }
 
+  // TrackBy function para otimizar performance do ngFor
+  trackByOptionId(index: number, item: any): any {
+    return item ? (item.id || item.value || index) : index;
+  }
+
+  // Invalidar cache das opções do combo
+  private invalidateComboCache() {
+    this._comboOptionsCacheValid = false;
+    this._comboCiliosTypeOptions = [];
+    this._comboCiliosCorOptions = [];
+    this._comboLabiosCorOptions = [];
+  }
+
+  // Calcular data mínima considerando hora atual e duração mínima
+  private calculateMinDate(): string {
+    // Usar fuso horário do Brasil (UTC-3)
+    const now = new Date();
+    const brazilTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+
+    const currentHour = brazilTime.getHours();
+    const currentMinute = brazilTime.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+    // Duração mínima em minutos (30 min para cílios, 120 min para combo)
+    const duracaoMinima = this.isComboSelected ? 120 : 30;
+
+    // Último horário do dia (18:00 = 1080 minutos)
+    const ultimoHorario = 18 * 60;
+
+    const tempoFinal = currentTimeInMinutes + duracaoMinima;
+    // Se não há tempo suficiente hoje, permitir a partir de amanhã
+    if (tempoFinal > ultimoHorario) {
+      const tomorrow = new Date(brazilTime);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      return tomorrowStr;
+    }
+
+    // Se há tempo suficiente hoje, permitir hoje
+    const todayStr = brazilTime.toISOString().split('T')[0];
+    return todayStr;
+  }
+
   async ngOnInit() {
     await this.storage.create();
 
+    // Calcular data mínima baseada na hora atual
+    this.minDate = this.calculateMinDate();
     // Load procedures and professionals from database
     this.api.getProcedimentos().subscribe({
       next: (res) => {
@@ -121,10 +205,10 @@ export class AgendamentoPage implements OnInit {
             // Carregar profissionais específicos para o primeiro procedimento
             this.loadProfissionais(this.procedimentos[0].id);
           }
+        } else {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar procedimentos:', err);
       }
     });
 
@@ -148,7 +232,6 @@ export class AgendamentoPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('❌ Erro ao carregar profissionais:', err);
       }
     });
   }
@@ -163,7 +246,6 @@ export class AgendamentoPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('❌ Erro ao carregar meus agendamentos:', err);
       }
     });
   }
@@ -249,7 +331,6 @@ export class AgendamentoPage implements OnInit {
         // Carregar agendamentos do usuário após login
         this.loadMeusAgendamentos();
       } catch (error) {
-        console.error('Erro ao restaurar dados temporários:', error);
       }
     }
   }
@@ -290,7 +371,6 @@ export class AgendamentoPage implements OnInit {
       const date = new Date(data + 'T00:00:00');
       return date.toLocaleDateString('pt-BR');
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return data;
     }
   }
@@ -372,8 +452,6 @@ export class AgendamentoPage implements OnInit {
         this.getTipoCiliosValueFromLabel(opt.label) === valor
       );
       this.tipoCiliosId = opcao?.id_tipo_cilios || null;
-      console.log('🔍 Tipo de cílios selecionado:', valor, '| ID:', this.tipoCiliosId);
-
       // Se já temos todos os IDs, buscar a combinação específica
       if (this.corCiliosId && this.corLabiosId) {
         this.buscarCombinacaoEspecifica();
@@ -381,6 +459,7 @@ export class AgendamentoPage implements OnInit {
     }
 
     this.calculatePriceAndDuration();
+    this.reloadHorariosIfNeeded();
   }
 
   updateCorCilios(valor: string) {
@@ -396,8 +475,6 @@ export class AgendamentoPage implements OnInit {
         this.getCorCiliosValueFromLabel(opt.label) === valor
       );
       this.corCiliosId = opcao?.id_cor_cilios || null;
-      console.log('🔍 Cor dos cílios selecionada:', valor, '| ID:', this.corCiliosId);
-
       // Se já temos todos os IDs, buscar a combinação específica
       if (this.tipoCiliosId && this.corLabiosId) {
         this.buscarCombinacaoEspecifica();
@@ -406,6 +483,7 @@ export class AgendamentoPage implements OnInit {
 
     // Recalcular pois cor pode afetar preço
     this.calculatePriceAndDuration();
+    this.reloadHorariosIfNeeded();
   }
 
   updateCorLabios(valor: string) {
@@ -421,53 +499,49 @@ export class AgendamentoPage implements OnInit {
         this.getCorLabiosValueFromLabel(opt.label) === valor
       );
       this.corLabiosId = opcao?.id_cor_labios || null;
-      console.log('🔍 Cor dos lábios selecionada:', valor, '| ID:', this.corLabiosId);
-
       // Após selecionar a cor dos lábios, buscar a combinação específica
       this.buscarCombinacaoEspecifica();
     } else {
       // Para outros procedimentos, usar o cálculo normal
       this.calculatePriceAndDuration();
     }
+    this.reloadHorariosIfNeeded();
   }
 
   // Método para buscar combinação específica no banco usando os 3 IDs
   buscarCombinacaoEspecifica() {
-    if (!this.isComboSelected || !this.tipoCiliosId || !this.corCiliosId || !this.corLabiosId) {
-      console.log('❌ Não é possível buscar combinação - IDs incompletos');
-      return;
-    }
+    try {
+      if (!this.isComboSelected || !this.tipoCiliosId || !this.corCiliosId || !this.corLabiosId) {
+        return;
+      }
 
-    console.log('🔍 Buscando combinação específica no banco...');
-    console.log('🔍 IDs:', {
-      tipoCiliosId: this.tipoCiliosId,
-      corCiliosId: this.corCiliosId,
-      corLabiosId: this.corLabiosId
-    });
+      if (!this.selectedProcedimentoOpcoes || !Array.isArray(this.selectedProcedimentoOpcoes)) {
+        this.currentPrice = 0;
+        this.currentDuration = 0;
+        this.selectedOptions = [];
+        return;
+      }
 
-    // Buscar a combinação específica nas opções carregadas
-    const combinacao = this.selectedProcedimentoOpcoes.find(opt =>
-      opt.tipo === 'combo_completo' &&
-      opt.id_tipo_cilios === this.tipoCiliosId &&
-      opt.id_cor_cilios === this.corCiliosId &&
-      opt.id_cor_labios === this.corLabiosId
-    );
+      // Buscar a combinação específica nas opções carregadas
+      const combinacao = this.selectedProcedimentoOpcoes.find(opt =>
+        opt &&
+        opt.tipo === 'combo_completo' &&
+        opt.id_tipo_cilios === this.tipoCiliosId &&
+        opt.id_cor_cilios === this.corCiliosId &&
+        opt.id_cor_labios === this.corLabiosId
+      );
 
-    if (combinacao) {
-      console.log('✅ Combinação encontrada:', combinacao);
-      console.log('✅ Preço:', combinacao.preco_centavos);
-      console.log('✅ Duração:', combinacao.duracao);
-      console.log('✅ Label:', combinacao.label);
-
-      // Atualizar preço e duração diretamente do backend
-      this.currentPrice = combinacao.preco_centavos || 0;
-      this.currentDuration = combinacao.duracao || 0;
-      this.selectedOptions = [combinacao];
-
-      console.log('✅ Preço atualizado para:', this.currentPrice);
-      console.log('✅ Duração atualizada para:', this.currentDuration);
-    } else {
-      console.log('❌ Combinação não encontrada no banco');
+      if (combinacao) {
+        // Atualizar preço e duração diretamente do backend
+        this.currentPrice = combinacao.preco_centavos || 0;
+        this.currentDuration = combinacao.duracao || 0;
+        this.selectedOptions = [combinacao];
+      } else {
+        this.currentPrice = 0;
+        this.currentDuration = 0;
+        this.selectedOptions = [];
+      }
+    } catch (error) {
       this.currentPrice = 0;
       this.currentDuration = 0;
       this.selectedOptions = [];
@@ -497,6 +571,16 @@ export class AgendamentoPage implements OnInit {
     // Corrigir problema de fuso horário - usar apenas a parte da data
     const date = this.selectedDate.split('T')[0];
 
+    // Recalcular preço e duração antes de buscar horários
+    this.calculatePriceAndDuration();
+
+    // Para combo, definir duração padrão se não há opções selecionadas
+    if (this.isComboSelected && this.currentDuration === 0) {
+      this.currentDuration = 120; // 2 horas como duração padrão para combo
+    }
+
+    // Carregar agendamentos para verificação de conflitos
+    this.loadAgendamentosForConflictCheck();
 
     this.api.getHorarios(date, this.selectedProfissional, this.selectedProcedimento).subscribe({
       next: (res) => {
@@ -509,26 +593,17 @@ export class AgendamentoPage implements OnInit {
             this.filterHorariosByPeriod();
             this.sugestoes = []; // Limpar sugestões se há horários
           } else {
-            console.warn('⚠️ API retornou success: true, mas sem horários');
             this.horariosDisponiveis = [];
             this.horariosDisponiveisFiltrados = [];
             this.sugestoes = res.sugestoes || []; // Receber sugestões da API
           }
         } else {
-          console.warn('❌ API retornou success: false');
-          console.warn('Mensagem:', res.message);
           this.horariosDisponiveis = [];
           this.horariosDisponiveisFiltrados = [];
           this.sugestoes = [];
         }
       },
       error: (err) => {
-        console.error('=== ERRO NA API ===');
-        console.error('Erro completo:', err);
-        console.error('Status:', err.status);
-        console.error('Message:', err.message);
-        console.error('Error:', err.error);
-        console.error('==================');
         this.showErrorAlert(`Erro ao buscar horários: ${err.message}`);
         this.horariosDisponiveis = [];
         this.horariosDisponiveisFiltrados = [];
@@ -541,23 +616,35 @@ export class AgendamentoPage implements OnInit {
   }
 
   filterHorariosByPeriod() {
-    if (this.selectedPeriod === 'all') {
-      this.horariosDisponiveisFiltrados = [...this.horariosDisponiveis];
-    } else {
-      this.horariosDisponiveisFiltrados = this.horariosDisponiveis.filter(time => {
-        const hour = parseInt(time.split(':')[0]);
+    let filteredHorarios = [...this.horariosDisponiveis];
 
-        switch (this.selectedPeriod) {
-          case 'morning':
-            return hour >= 6 && hour < 12; // 06:00 - 11:59
-          case 'afternoon':
-            return hour >= 12 && hour < 18; // 12:00 - 17:59
-          case 'evening':
-            return hour >= 18 && hour < 24; // 18:00 - 23:59
-          default:
-            return true;
-        }
+    // Aplicar filtro de período
+    if (this.selectedPeriod !== 'all') {
+      filteredHorarios = filteredHorarios.filter(time => {
+        const hour = parseInt(time.split(':')[0]);
+        const isValid = this.isValidTimeForPeriod(time, hour);
+        return isValid;
       });
+    }
+
+    // Aplicar filtro de duração (conflitos)
+    filteredHorarios = filteredHorarios.filter(time => {
+      return !this.conflictWithDuration(time);
+    });
+
+    this.horariosDisponiveisFiltrados = filteredHorarios;
+  }
+
+  private isValidTimeForPeriod(time: string, hour: number): boolean {
+    switch (this.selectedPeriod) {
+      case 'morning':
+        return hour >= 6 && hour < 12; // 06:00 - 11:59
+      case 'afternoon':
+        return hour >= 12 && hour < 18; // 12:00 - 17:59
+      case 'evening':
+        return hour >= 18 && hour < 24; // 18:00 - 23:59
+      default:
+        return true;
     }
   }
 
@@ -573,8 +660,22 @@ export class AgendamentoPage implements OnInit {
 
   async setProcedimento(procedimentoId: number) {
     this.selectedProcedimento = procedimentoId;
+
+    // Invalidar cache quando procedimento muda
+    this.invalidateComboCache();
+
+    // Limpar horários e seleções quando procedimento muda
+    this.horariosDisponiveis = [];
+    this.horariosDisponiveisFiltrados = [];
+    this.selectedTime = '';
+    this.sugestoes = [];
+
     this.setDefaultOptions();
     this.calculatePriceAndDuration();
+
+    // Recalcular data mínima baseada no novo procedimento
+    this.minDate = this.calculateMinDate();
+
     await this.storage.set('selectedProcedimento', procedimentoId);
 
     // Resetar seleção de profissional antes de carregar novos
@@ -582,6 +683,11 @@ export class AgendamentoPage implements OnInit {
 
     // Recarregar profissionais baseado no procedimento selecionado
     this.loadProfissionais(procedimentoId);
+
+    // Recarregar horários se uma data já foi selecionada
+    if (this.selectedDate) {
+      this.onDateChange();
+    }
   }
 
   // Helper methods for template
@@ -595,12 +701,9 @@ export class AgendamentoPage implements OnInit {
   }
 
   getProcedimentoIdByCategoria(categoria: string): number {
-    if (categoria === 'combo') {
-      const procedimento = this.procedimentos.find(p => p.categoria === 'combo' || p.nome.toLowerCase().includes('combo'));
-      return procedimento ? procedimento.id : 0;
-    }
     const procedimento = this.procedimentos.find(p => p.categoria === categoria);
-    return procedimento ? procedimento.id : 0;
+    const id = procedimento ? procedimento.id : 0;
+    return id;
   }
 
   get isLabiosSelected(): boolean {
@@ -608,8 +711,16 @@ export class AgendamentoPage implements OnInit {
   }
 
   get isComboSelected(): boolean {
-    const proc = this.procedimentos.find(p => p.id === this.selectedProcedimento);
-    return proc ? (proc.categoria === 'combo' || proc.nome.toLowerCase().includes('combo')) : false;
+    try {
+      if (!this.selectedProcedimento || !this.procedimentos || !Array.isArray(this.procedimentos)) {
+        return false;
+      }
+
+      const proc = this.procedimentos.find(p => p && p.id === this.selectedProcedimento);
+      return proc ? (proc.categoria === 'combo' || (proc.nome && proc.nome.toLowerCase().includes('combo'))) : false;
+    } catch (error) {
+      return false;
+    }
   }
 
   get selectedProcedimentoOpcoes(): any[] {
@@ -618,65 +729,190 @@ export class AgendamentoPage implements OnInit {
 
   // Métodos para combo
   getComboCiliosTypeOptions(): any[] {
-    if (!this.isComboSelected) return [];
+    // Retornar cache se válido
+    if (this._comboOptionsCacheValid && this._comboCiliosTypeOptions.length > 0) {
+      return this._comboCiliosTypeOptions;
+    }
 
+    try {
+      if (!this.isComboSelected) {
+        this._comboCiliosTypeOptions = [];
+        return [];
+      }
 
-    // Extrair tipos únicos de cílios das combinações de combo
-    const tipos = new Set();
-    this.selectedProcedimentoOpcoes
-      .filter(opt => opt.tipo === 'combo_completo')
-      .forEach(opt => {
-        if (opt.id_tipo_cilios) {
-          tipos.add(JSON.stringify({
-            id: opt.id_tipo_cilios,
-            label: this.extractTipoCiliosFromLabel(opt.label),
-            value: this.getTipoCiliosValueFromLabel(opt.label)
-          }));
+      // Verificar se selectedProcedimentoOpcoes existe e é array
+      if (!this.selectedProcedimentoOpcoes || !Array.isArray(this.selectedProcedimentoOpcoes)) {
+        this._comboCiliosTypeOptions = [];
+        return [];
+      }
+
+      // Extrair tipos únicos de cílios das combinações de combo
+      const tipos = new Set();
+      const opcoesCombo = this.selectedProcedimentoOpcoes.filter(opt =>
+        opt &&
+        opt.tipo === 'combo_completo' &&
+        opt.id_tipo_cilios
+      );
+
+      if (opcoesCombo.length === 0) {
+        this._comboCiliosTypeOptions = [];
+        return [];
+      }
+
+      opcoesCombo.forEach((opt) => {
+        try {
+          if (opt.id_tipo_cilios && opt.label) {
+            const tipoData = {
+              id: opt.id_tipo_cilios,
+              label: this.extractTipoCiliosFromLabel(opt.label),
+              value: this.getTipoCiliosValueFromLabel(opt.label)
+            };
+            tipos.add(JSON.stringify(tipoData));
+          }
+        } catch (error) {
         }
       });
 
-    const result = Array.from(tipos).map(tipo => JSON.parse(tipo as string));
-    return result;
+      const result = Array.from(tipos).map(tipo => {
+        try {
+          return JSON.parse(tipo as string);
+        } catch (error) {
+          return null;
+        }
+      }).filter(item => item !== null);
+
+      // Atualizar cache
+      this._comboCiliosTypeOptions = result;
+      this._comboOptionsCacheValid = true;
+      return result;
+    } catch (error) {
+      this._comboCiliosTypeOptions = [];
+      return [];
+    }
   }
 
   getComboCiliosCorOptions(): any[] {
-    if (!this.isComboSelected) return [];
+    // Retornar cache se válido
+    if (this._comboOptionsCacheValid && this._comboCiliosCorOptions.length > 0) {
+      return this._comboCiliosCorOptions;
+    }
 
-    // Extrair cores únicas de cílios das combinações de combo
-    const cores = new Set();
-    this.selectedProcedimentoOpcoes
-      .filter(opt => opt.tipo === 'combo_completo')
-      .forEach(opt => {
-        if (opt.id_cor_cilios) {
-          cores.add(JSON.stringify({
-            id: opt.id_cor_cilios,
-            label: this.extractCorCiliosFromLabel(opt.label),
-            value: this.getCorCiliosValueFromLabel(opt.label)
-          }));
+    try {
+      if (!this.isComboSelected) {
+        this._comboCiliosCorOptions = [];
+        return [];
+      }
+
+      if (!this.selectedProcedimentoOpcoes || !Array.isArray(this.selectedProcedimentoOpcoes)) {
+        this._comboCiliosCorOptions = [];
+        return [];
+      }
+
+      // Extrair cores únicas de cílios das combinações de combo
+      const cores = new Set();
+      const opcoesCombo = this.selectedProcedimentoOpcoes.filter(opt =>
+        opt &&
+        opt.tipo === 'combo_completo' &&
+        opt.id_cor_cilios
+      );
+
+      if (opcoesCombo.length === 0) {
+        this._comboCiliosCorOptions = [];
+        return [];
+      }
+
+      opcoesCombo.forEach((opt) => {
+        try {
+          if (opt.id_cor_cilios && opt.label) {
+            const corData = {
+              id: opt.id_cor_cilios,
+              label: this.extractCorCiliosFromLabel(opt.label),
+              value: this.getCorCiliosValueFromLabel(opt.label)
+            };
+            cores.add(JSON.stringify(corData));
+          }
+        } catch (error) {
         }
       });
 
-    return Array.from(cores).map(cor => JSON.parse(cor as string));
+      const result = Array.from(cores).map(cor => {
+        try {
+          return JSON.parse(cor as string);
+        } catch (error) {
+          return null;
+        }
+      }).filter(item => item !== null);
+
+      // Atualizar cache
+      this._comboCiliosCorOptions = result;
+      this._comboOptionsCacheValid = true;
+      return result;
+    } catch (error) {
+      this._comboCiliosCorOptions = [];
+      return [];
+    }
   }
 
   getComboLabiosCorOptions(): any[] {
-    if (!this.isComboSelected) return [];
+    // Retornar cache se válido
+    if (this._comboOptionsCacheValid && this._comboLabiosCorOptions.length > 0) {
+      return this._comboLabiosCorOptions;
+    }
 
-    // Extrair cores únicas de lábios das combinações de combo
-    const cores = new Set();
-    this.selectedProcedimentoOpcoes
-      .filter(opt => opt.tipo === 'combo_completo')
-      .forEach(opt => {
-        if (opt.id_cor_labios) {
-          cores.add(JSON.stringify({
-            id: opt.id_cor_labios,
-            label: this.extractCorLabiosFromLabel(opt.label),
-            value: this.getCorLabiosValueFromLabel(opt.label)
-          }));
+    try {
+      if (!this.isComboSelected) {
+        this._comboLabiosCorOptions = [];
+        return [];
+      }
+
+      if (!this.selectedProcedimentoOpcoes || !Array.isArray(this.selectedProcedimentoOpcoes)) {
+        this._comboLabiosCorOptions = [];
+        return [];
+      }
+
+      // Extrair cores únicas de lábios das combinações de combo
+      const cores = new Set();
+      const opcoesCombo = this.selectedProcedimentoOpcoes.filter(opt =>
+        opt &&
+        opt.tipo === 'combo_completo' &&
+        opt.id_cor_labios
+      );
+
+      if (opcoesCombo.length === 0) {
+        this._comboLabiosCorOptions = [];
+        return [];
+      }
+
+      opcoesCombo.forEach((opt) => {
+        try {
+          if (opt.id_cor_labios && opt.label) {
+            const corData = {
+              id: opt.id_cor_labios,
+              label: this.extractCorLabiosFromLabel(opt.label),
+              value: this.getCorLabiosValueFromLabel(opt.label)
+            };
+            cores.add(JSON.stringify(corData));
+          }
+        } catch (error) {
         }
       });
 
-    return Array.from(cores).map(cor => JSON.parse(cor as string));
+      const result = Array.from(cores).map(cor => {
+        try {
+          return JSON.parse(cor as string);
+        } catch (error) {
+          return null;
+        }
+      }).filter(item => item !== null);
+
+      // Atualizar cache
+      this._comboLabiosCorOptions = result;
+      this._comboOptionsCacheValid = true;
+      return result;
+    } catch (error) {
+      this._comboLabiosCorOptions = [];
+      return [];
+    }
   }
 
   getCiliosTypeOptions(): any[] {
@@ -685,39 +921,72 @@ export class AgendamentoPage implements OnInit {
 
   // Métodos auxiliares para extrair informações dos labels de combo
   extractTipoCiliosFromLabel(label: string): string {
-    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Fio a Fio - Rímel"
-    const parts = label.split(' + ');
-    return parts[0] || '';
+    try {
+      if (!label || typeof label !== 'string') {
+        return '';
+      }
+      // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Fio a Fio - Rímel"
+      const parts = label.split(' + ');
+      return parts[0] || '';
+    } catch (error) {
+      return '';
+    }
   }
 
   getTipoCiliosValueFromLabel(label: string): string {
-    const tipo = this.extractTipoCiliosFromLabel(label);
-    return tipo === 'Fio a Fio - Rímel' ? 'fio_rimel' :
-           tipo === 'Volume Brasileiro' ? 'volume_brasileiro' :
-           tipo === 'Volume Inglês' ? 'volume_ingles' :
-           tipo === 'Fox Eyes - Raposinha' ? 'fox_eyes' : 'lash_lifting';
+    try {
+      const tipo = this.extractTipoCiliosFromLabel(label);
+      return tipo === 'Fio a Fio - Rímel' ? 'fio_rimel' :
+             tipo === 'Volume Brasileiro' ? 'volume_brasileiro' :
+             tipo === 'Volume Inglês' ? 'volume_ingles' :
+             tipo === 'Fox Eyes - Raposinha' ? 'fox_eyes' : 'lash_lifting';
+    } catch (error) {
+      return 'lash_lifting';
+    }
   }
 
   extractCorCiliosFromLabel(label: string): string {
-    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Preto"
-    const parts = label.split(' + ');
-    return parts[1] || '';
+    try {
+      if (!label || typeof label !== 'string') {
+        return '';
+      }
+      // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Preto"
+      const parts = label.split(' + ');
+      return parts[1] || '';
+    } catch (error) {
+      return '';
+    }
   }
 
   getCorCiliosValueFromLabel(label: string): string {
-    const cor = this.extractCorCiliosFromLabel(label);
-    return cor.toLowerCase();
+    try {
+      const cor = this.extractCorCiliosFromLabel(label);
+      return cor ? cor.toLowerCase() : '';
+    } catch (error) {
+      return '';
+    }
   }
 
   extractCorLabiosFromLabel(label: string): string {
-    // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Ruby"
-    const parts = label.split(' + ');
-    return parts[2] || '';
+    try {
+      if (!label || typeof label !== 'string') {
+        return '';
+      }
+      // Exemplo: "Fio a Fio - Rímel + Preto + Ruby" -> "Ruby"
+      const parts = label.split(' + ');
+      return parts[2] || '';
+    } catch (error) {
+      return '';
+    }
   }
 
   getCorLabiosValueFromLabel(label: string): string {
-    const cor = this.extractCorLabiosFromLabel(label);
-    return cor.toLowerCase();
+    try {
+      const cor = this.extractCorLabiosFromLabel(label);
+      return cor ? cor.toLowerCase() : '';
+    } catch (error) {
+      return '';
+    }
   }
 
   // Método para obter opções de combo
@@ -761,7 +1030,6 @@ export class AgendamentoPage implements OnInit {
     };
     return labels[cor] || cor;
   }
-
 
   getCorBackground(opcao: any): string {
     // Se tem campo hex, usa ele
@@ -824,20 +1092,12 @@ export class AgendamentoPage implements OnInit {
         } else if (this.isComboSelected) {
 
           // Para combo, buscar a combinação específica usando as FK
-          console.log('🔍 Buscando combinação com IDs:', {
-            tipoCiliosId: this.tipoCiliosId,
-            corCiliosId: this.corCiliosId,
-            corLabiosId: this.corLabiosId
-          });
           const comboOpcao = opcoes.find(opt =>
             opt.tipo === 'combo_completo' &&
             opt.id_tipo_cilios === this.tipoCiliosId &&
             opt.id_cor_cilios === this.corCiliosId &&
             opt.id_cor_labios === this.corLabiosId
           );
-          console.log('🔍 Combinação encontrada:', comboOpcao);
-
-
           if (comboOpcao) {
             this.currentPrice = comboOpcao.preco_centavos || 0;
             this.currentDuration = comboOpcao.duracao || 0;
@@ -848,14 +1108,8 @@ export class AgendamentoPage implements OnInit {
             this.currentPrice = 0;
             this.currentDuration = 0;
             this.selectedOptions = [];
-            console.log('❌ Combinação não encontrada - verifique se os IDs estão corretos');
           }
         }
-
-    // Recalcular horários disponíveis se uma data já foi selecionada
-    if (this.selectedDate) {
-      this.onDateChange();
-    }
   }
 
   // Método para verificar se um horário conflita com a duração
@@ -873,11 +1127,124 @@ export class AgendamentoPage implements OnInit {
       return true; // Conflita porque não há tempo suficiente no dia
     }
 
-    // Para simplicidade, vamos permitir todos os horários que cabem no dia
-    // Em uma implementação mais complexa, verificaríamos se há agendamentos conflitantes
+    // Verificar conflitos com agendamentos existentes
+    return this.hasConflictWithExistingAppointments(timeSlot);
+  }
+
+  // Cache de agendamentos para evitar múltiplas consultas
+  private agendamentosCache: { [data: string]: any[] } = {};
+  private agendamentosCacheTime: { [data: string]: number } = {};
+  private readonly CACHE_DURATION = 30000; // 30 segundos
+
+  // Método para verificar conflitos com agendamentos existentes
+  hasConflictWithExistingAppointments(timeSlot: string): boolean {
+    if (!this.selectedDate || !this.currentDuration) return false;
+
+    // Verificar se temos agendamentos em cache para esta data
+    const cacheKey = this.selectedDate;
+    const now = Date.now();
+
+    if (this.agendamentosCache[cacheKey] &&
+        this.agendamentosCacheTime[cacheKey] &&
+        (now - this.agendamentosCacheTime[cacheKey]) < this.CACHE_DURATION) {
+
+      // Usar cache
+      return this.checkConflictsWithCachedAppointments(timeSlot, this.agendamentosCache[cacheKey]);
+    }
+
+    // Se não há cache válido, buscar agendamentos
+    this.loadAgendamentosForConflictCheck();
+    return false; // Por enquanto, não bloquear até carregar
+  }
+
+  // Método para carregar agendamentos para verificação de conflitos
+  private loadAgendamentosForConflictCheck() {
+    if (!this.selectedDate) return;
+
+    this.api.getAgendamentosPorData(this.selectedDate).subscribe({
+      next: (res) => {
+        if (res.success && res.agendamentos) {
+          // Armazenar no cache
+          this.agendamentosCache[this.selectedDate] = res.agendamentos;
+          this.agendamentosCacheTime[this.selectedDate] = Date.now();
+
+          // Recarregar horários com os dados atualizados
+          this.filterHorariosByPeriod();
+        }
+      },
+      error: (err) => {
+        // Em caso de erro, não bloquear horários
+      }
+    });
+  }
+
+  // Método para verificar conflitos com agendamentos em cache
+  private checkConflictsWithCachedAppointments(timeSlot: string, agendamentos: any[]): boolean {
+    for (const agendamento of agendamentos) {
+      if (this.checkTimeConflict(timeSlot, agendamento)) {
+        return true;
+      }
+    }
     return false;
   }
 
+  // Método para verificar conflito entre dois horários
+  checkTimeConflict(newTimeSlot: string, existingAppointment: any): boolean {
+    if (!existingAppointment.hora || !existingAppointment.procedimento_id) return false;
+
+    // Se há um profissional específico selecionado, verificar se é o mesmo
+    if (this.selectedProfissional && this.selectedProfissional > 0) {
+      if (existingAppointment.profissional_id &&
+          existingAppointment.profissional_id !== this.selectedProfissional) {
+        return false; // Não há conflito se são profissionais diferentes
+      }
+    }
+
+    // Calcular duração do agendamento existente
+    const existingDuration = this.getAppointmentDuration(existingAppointment.procedimento_id);
+    if (!existingDuration) return false;
+
+    // Converter horários para minutos
+    const [newHours, newMinutes] = newTimeSlot.split(':').map(Number);
+    const newStart = newHours * 60 + newMinutes;
+    const newEnd = newStart + this.currentDuration;
+
+    const [existingHours, existingMinutes] = existingAppointment.hora.split(':').map(Number);
+    const existingStart = existingHours * 60 + existingMinutes;
+    const existingEnd = existingStart + existingDuration;
+
+    // Verificar se há sobreposição de horários
+    return (newStart < existingEnd && newEnd > existingStart);
+  }
+
+  // Método para obter duração de um agendamento baseado no procedimento
+  getAppointmentDuration(procedimentoId: number): number {
+    const durationMap: { [key: number]: number } = {
+      1: 30,  // Design de sobrancelhas
+      2: 45,  // Micropigmentação
+      3: 30,  // Cílios
+      4: 60,  // Lábios
+      5: 120, // Combo (cílios + lábios)
+    };
+
+    return durationMap[procedimentoId] || 60; // Default 60 minutos
+  }
+
+  // Método para invalidar cache de agendamentos
+  private invalidateAgendamentosCache() {
+    this.agendamentosCache = {};
+    this.agendamentosCacheTime = {};
+  }
+
+  // Método para recarregar horários quando necessário (sem loops)
+  private reloadHorariosIfNeeded() {
+    if (this.selectedDate) {
+      // Usar setTimeout para evitar loops síncronos
+      setTimeout(() => {
+        this.onDateChange();
+      }, 0);
+    }
+  }
 
   onSubmit() {
     if (!this.selectedProcedimento || !this.selectedDate || !this.selectedTime) {
@@ -952,6 +1319,9 @@ export class AgendamentoPage implements OnInit {
     }).subscribe({
       next: (res) => {
         if (res?.success) {
+          // Invalidar cache de agendamentos após criar com sucesso
+          this.invalidateAgendamentosCache();
+
           const state = {
             id: res.id,
             servico: this.procedimentos.find(p => p.id === this.selectedProcedimento)?.nome || 'Procedimento',

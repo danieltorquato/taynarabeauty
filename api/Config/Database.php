@@ -1,4 +1,7 @@
 <?php
+// Configurar timezone para Brasil
+date_default_timezone_set('America/Sao_Paulo');
+
 class Database {
     private $host = "193.203.175.216";
     private $db_name = "u576486711_taybeauty";

@@ -120,7 +120,6 @@ export class AgendamentosAdminPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar profissionais:', err);
       }
     });
   }
@@ -146,7 +145,6 @@ export class AgendamentosAdminPage implements OnInit {
       },
       error: (err) => {
         this.loading = false;
-        console.error('Erro ao carregar agendamentos:', err);
       }
     });
   }
@@ -240,7 +238,6 @@ export class AgendamentosAdminPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao aprovar agendamento:', err);
           this.showErrorAlert('Erro ao aprovar agendamento');
         }
       });
@@ -258,7 +255,6 @@ export class AgendamentosAdminPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao rejeitar agendamento:', err);
           this.showErrorAlert('Erro ao rejeitar agendamento');
         }
       });
@@ -281,7 +277,6 @@ export class AgendamentosAdminPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao marcar falta:', err);
           this.showErrorAlert('Erro ao marcar falta');
         }
       });
@@ -317,7 +312,6 @@ export class AgendamentosAdminPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao desmarcar agendamento:', err);
         this.showErrorAlert('Erro ao desmarcar agendamento');
       }
     });
@@ -339,7 +333,6 @@ export class AgendamentosAdminPage implements OnInit {
           }
         },
         error: (err) => {
-          console.error('Erro ao cancelar agendamento:', err);
           this.showErrorAlert('Erro ao cancelar agendamento');
         }
       });
@@ -382,7 +375,6 @@ export class AgendamentosAdminPage implements OnInit {
       const date = new Date(data + 'T00:00:00');
       return date.toLocaleDateString('pt-BR');
     } catch (error) {
-      console.error('Erro ao formatar data:', error);
       return data;
     }
   }
@@ -405,7 +397,6 @@ export class AgendamentosAdminPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar procedimentos:', err);
       }
     });
   }
@@ -432,8 +423,6 @@ export class AgendamentosAdminPage implements OnInit {
   onDateChangeAgendamento() {
     // Garantir que a data seja processada corretamente sem problemas de fuso horário
     this.selectedDate = this.normalizeDate(this.selectedDate);
-    console.log('📅 Data normalizada (agendamento):', this.selectedDate);
-
     if (this.selectedDate && this.selectedProcedimento) {
       this.carregarHorariosDisponiveis();
     }
@@ -457,7 +446,6 @@ export class AgendamentosAdminPage implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Erro ao carregar horários:', err);
         this.horariosDisponiveis = [];
       }
     });

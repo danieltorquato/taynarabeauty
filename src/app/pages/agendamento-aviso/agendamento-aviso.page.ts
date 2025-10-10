@@ -46,7 +46,6 @@ export class AgendamentoAvisoPage implements OnInit {
           profissional: this.getProfissionalName(appointmentData.selectedProfissional)
         };
       } catch (error) {
-        console.error('Erro ao carregar dados do agendamento:', error);
       }
     }
   }

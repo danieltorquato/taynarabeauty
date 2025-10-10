@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+require_once __DIR__ . '/Config/Timezone.php';
 require_once __DIR__ . '/Config/Database.php';
 
 spl_autoload_register(function ($class) {

@@ -9,15 +9,6 @@
 
 <ion-content>
   <div class="container">
-    <!-- DEBUG INFO -->
-    <div style="background: yellow; padding: 10px; margin: 10px; border: 2px solid red;">
-      <h3>DEBUG INFO:</h3>
-      <p>Loading: {{ loading }}</p>
-      <p>Agendamentos: {{ agendamentos.length }}</p>
-      <p>Agendamentos Ativos: {{ agendamentosAtivos.length }}</p>
-      <p>Agendamentos Filtrados: {{ agendamentosFiltrados.length }}</p>
-      <p>Selected Segment: {{ selectedSegment }}</p>
-    </div>
 
     <div *ngIf="loading" class="loading">
       <ion-icon name="time-outline"></ion-icon>

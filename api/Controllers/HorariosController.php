@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../Config/Timezone.php';
 require_once __DIR__ . '/../Config/Database.php';
 
 class HorariosController {
@@ -464,18 +465,38 @@ class HorariosController {
         // Buscar horários disponíveis para lábios (ID 4)
         $horariosLabios = $this->getHorariosPorProcedimento($conn, $data, $profissionalId, 4);
 
-        // Encontrar horários que estão disponíveis para AMBOS os procedimentos
-        foreach ($horariosCilios as $horarioCilios) {
-            foreach ($horariosLabios as $horarioLabios) {
-                if ($horarioCilios['hora'] === $horarioLabios['hora']) {
-                    // Verificar se o horário tem duração mínima suficiente para combo
-                    if ($this->verificarDuracaoMinima($conn, $data, $horarioCilios['hora'], $profissionalId, $duracaoMinimaCombo)) {
-                        // Verificar se há conflitos com agendamentos existentes
-                        if ($this->verificarDisponibilidadeCombo($conn, $data, $horarioCilios['hora'], $profissionalId)) {
-                            $horariosCombo[] = [
-                                'hora' => $horarioCilios['hora'],
-                                'status' => 'livre'
-                            ];
+        // Se não há horários específicos para combo, mas há para cílios e lábios,
+        // usar a interseção dos horários disponíveis
+        if (empty($horariosCilios) && empty($horariosLabios)) {
+            // Se não há horários para nenhum dos procedimentos individuais,
+            // buscar horários gerais (sem procedimento específico)
+            $horariosGerais = $this->getHorariosGerais($conn, $data, $profissionalId);
+
+            // Para horários gerais, verificar se têm duração suficiente para combo
+            foreach ($horariosGerais as $horario) {
+                if ($this->verificarDuracaoMinima($conn, $data, $horario['hora'], $profissionalId, $duracaoMinimaCombo)) {
+                    if ($this->verificarDisponibilidadeCombo($conn, $data, $horario['hora'], $profissionalId)) {
+                        $horariosCombo[] = [
+                            'hora' => $horario['hora'],
+                            'status' => 'livre'
+                        ];
+                    }
+                }
+            }
+        } else {
+            // Encontrar horários que estão disponíveis para AMBOS os procedimentos
+            foreach ($horariosCilios as $horarioCilios) {
+                foreach ($horariosLabios as $horarioLabios) {
+                    if ($horarioCilios['hora'] === $horarioLabios['hora']) {
+                        // Verificar se o horário tem duração mínima suficiente para combo
+                        if ($this->verificarDuracaoMinima($conn, $data, $horarioCilios['hora'], $profissionalId, $duracaoMinimaCombo)) {
+                            // Verificar se há conflitos com agendamentos existentes
+                            if ($this->verificarDisponibilidadeCombo($conn, $data, $horarioCilios['hora'], $profissionalId)) {
+                                $horariosCombo[] = [
+                                    'hora' => $horarioCilios['hora'],
+                                    'status' => 'livre'
+                                ];
+                            }
                         }
                     }
                 }
@@ -483,6 +504,27 @@ class HorariosController {
         }
 
         return $horariosCombo;
+    }
+
+    // Novo método para buscar horários gerais (sem procedimento específico)
+    private function getHorariosGerais($conn, $data, $profissionalId) {
+        $whereConditions = ['data = :data', 'status = "livre"'];
+        $params = [':data' => $data];
+
+        if ($profissionalId && $profissionalId > 0) {
+            $whereConditions[] = 'profissional_id = :profissional_id';
+            $params[':profissional_id'] = $profissionalId;
+        }
+
+        $sql = 'SELECT hora, status FROM horarios_disponiveis WHERE ' . implode(' AND ', $whereConditions) . ' ORDER BY hora';
+        $stmt = $conn->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     private function getHorariosPorProcedimento($conn, $data, $profissionalId, $procedimentoId) {
